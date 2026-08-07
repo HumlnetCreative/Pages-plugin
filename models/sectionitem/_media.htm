@@ -1,0 +1,145 @@
+<?php if ($model->exists): ?>
+    <?php
+        $mediaService = new \HumlnetCreative\Pages\Services\MediaService();
+        $slotOptions = $mediaService->slotOptionsForOwner($model);
+        $mediaUses = $model->media()->with('asset')->get();
+    ?>
+    <div id="hucr-media-editor-item-<?= $model->id ?>" class="form-group span-full hucr-media-editor">
+        <div class="hucr-media-upload">
+            <div class="hucr-media-upload__grid">
+                <div class="hucr-media-field">
+                    <label for="hucr-media-file-item-<?= $model->id ?>">Soubor obrázku</label>
+                    <input id="hucr-media-file-item-<?= $model->id ?>" class="form-control" type="file" name="media_file" accept="image/jpeg,image/png,image/webp,image/avif">
+                </div>
+
+                <div class="hucr-media-field">
+                    <label for="hucr-media-slot-item-<?= $model->id ?>">Umístění obrázku</label>
+                    <?php if (count($slotOptions) === 1): ?>
+                        <?php $onlySlot = array_key_first($slotOptions); ?>
+                        <input type="hidden" name="media_slot" value="<?= e($onlySlot) ?>">
+                        <div class="form-control" aria-readonly="true"><?= e($slotOptions[$onlySlot]) ?></div>
+                    <?php else: ?>
+                        <select id="hucr-media-slot-item-<?= $model->id ?>" class="form-control custom-select" name="media_slot">
+                            <?php foreach ($slotOptions as $slot => $label): ?>
+                                <option value="<?= e($slot) ?>"><?= e($label) ?></option>
+                            <?php endforeach ?>
+                        </select>
+                    <?php endif ?>
+                </div>
+
+                <div class="hucr-media-description hucr-media-upload__description" data-hucr-media-description>
+                    <div class="hucr-media-description__alt">
+                        <label for="hucr-media-alt-item-<?= $model->id ?>">Alternativní text</label>
+                        <input id="hucr-media-alt-item-<?= $model->id ?>" class="form-control" type="text" name="media_alt_text" data-hucr-media-alt placeholder="Stručně popište význam obrázku">
+                    </div>
+                    <div class="hucr-media-description__decorative">
+                        <label>
+                            <input type="checkbox" name="media_decorative" value="1" data-hucr-media-decorative>
+                            Dekorativní obrázek
+                        </label>
+                    </div>
+                    <p class="help-block hucr-media-description__help">
+                        Dekorativní obrázek má prázdný atribut alt. Jakmile napíšete alternativní text, dekorativní označení se automaticky zruší; prázdný text se při uložení považuje za dekorativní obrázek.
+                    </p>
+                </div>
+
+                <div class="hucr-media-upload__actions">
+                    <input type="hidden" name="media_owner_kind" value="item">
+                    <input type="hidden" name="media_owner_id" value="<?= $model->id ?>">
+                    <button type="button" class="btn btn-primary" data-request="onUploadMedia" data-request-files>Nahrát obrázek</button>
+                </div>
+            </div>
+        </div>
+
+        <?php if ($mediaUses->isNotEmpty()): ?>
+            <h5 class="hucr-media-list-title">Připojená média</h5>
+            <?php foreach ($mediaUses as $use): ?>
+                <?php
+                    $crop = $use->crop ?: [];
+                    $previewUrl = $mediaService->backendPreviewUrl($use);
+                    $reuseSlotOptions = array_diff_key($slotOptions, [$use->slot => true]);
+                ?>
+                <article
+                    class="hucr-media-card"
+                    data-hucr-media-card
+                    data-media-use-id="<?= (int) $use->id ?>"
+                    data-media-owner-kind="item"
+                    data-media-owner-id="<?= (int) $model->id ?>">
+                    <div class="hucr-media-card__layout">
+                        <div class="hucr-media-card__preview">
+                            <img src="<?= e($previewUrl) ?>" alt="<?= e($use->alt_text ?: '') ?>">
+                        </div>
+
+                        <div class="hucr-media-card__content">
+                            <div class="hucr-media-card__header">
+                                <div>
+                                    <div class="hucr-media-card__title"><strong><?= e($mediaService->slotLabel($use->slot)) ?></strong></div>
+                                    <div class="hucr-media-card__meta">
+                                        <?= e($use->asset->original_name) ?> · <?= (int) $use->asset->width ?>×<?= (int) $use->asset->height ?> px<br>
+                                        Výřez <?= (int) ($crop['width'] ?? $use->asset->width) ?>×<?= (int) ($crop['height'] ?? $use->asset->height) ?> px
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="btn btn-danger btn-sm oc-icon-trash-o hucr-media-card__remove"
+                                    data-request="onDeleteMedia"
+                                    data-request-data="media_use_id: <?= (int) $use->id ?>"
+                                    data-request-confirm="Odstranit obrázek z tohoto umístění?">
+                                    Odstranit
+                                </button>
+                            </div>
+
+                            <section class="hucr-media-description" data-hucr-media-description>
+                                <label class="hucr-media-description__full-label" for="hucr-media-alt-use-<?= (int) $use->id ?>">
+                                    Alternativní text
+                                    <i
+                                        class="icon-info-circle hucr-media-description__tooltip"
+                                        data-bs-toggle="tooltip"
+                                        title="Dekorativní obrázek se čtečkám obrazovky nepředčítá."
+                                        tabindex="0"
+                                        aria-label="Dekorativní obrázek se čtečkám obrazovky nepředčítá."></i>
+                                </label>
+                                <div class="hucr-media-description__alt">
+                                    <input id="hucr-media-alt-use-<?= (int) $use->id ?>" class="form-control" type="text" value="<?= e($use->alt_text ?: '') ?>" data-hucr-media-alt placeholder="Stručně popište význam obrázku">
+                                </div>
+                                <div class="hucr-media-description__decorative">
+                                    <label>
+                                        <input type="checkbox" <?= $use->is_decorative ? 'checked' : '' ?> data-hucr-media-decorative>
+                                        Dekorativní obrázek
+                                    </label>
+                                </div>
+                            </section>
+
+                            <div class="hucr-media-card__actions">
+                                <button type="button" class="btn btn-primary btn-sm" data-hucr-update-media-metadata>Uložit popis</button>
+                                <button
+                                    type="button"
+                                    class="btn btn-default btn-sm oc-icon-crop"
+                                    data-control="popup"
+                                    data-handler="onLoadMediaCropEditor"
+                                    data-request-data="media_use_id: <?= (int) $use->id ?>"
+                                    data-size="huge">
+                                    Upravit ořez
+                                </button>
+                            </div>
+
+                            <?php if ($reuseSlotOptions): ?>
+                                <div class="hucr-media-card__section">
+                                    <div class="hucr-media-card__section-title">Použít stejný originál také jinde</div>
+                                    <div class="hucr-media-reuse">
+                                        <select id="hucr-reuse-media-slot-<?= (int) $use->id ?>" class="form-control custom-select" aria-label="Nové umístění" data-hucr-reuse-slot>
+                                            <?php foreach ($reuseSlotOptions as $slot => $label): ?>
+                                                <option value="<?= e($slot) ?>"><?= e($label) ?></option>
+                                            <?php endforeach ?>
+                                        </select>
+                                        <button type="button" class="btn btn-default" data-hucr-reuse-media>Použít v tomto umístění</button>
+                                    </div>
+                                </div>
+                            <?php endif ?>
+                        </div>
+                    </div>
+                </article>
+            <?php endforeach ?>
+        <?php endif ?>
+    </div>
+<?php endif ?>

@@ -1,4 +1,4 @@
-<?php namespace LZaplata\Pages\Controllers;
+<?php namespace HumlnetCreative\Pages\Controllers;
 
 use Backend;
 use BackendMenu;
@@ -15,13 +15,13 @@ class Blocks extends Controller
     public $listConfig = 'config_list.yaml';
 
     public $requiredPermissions = [
-        'lzaplata.pages.block'
+        'humlnetcreative.pages.block'
     ];
 
     public function __construct()
     {
         parent::__construct();
-        BackendMenu::setContext('LZaplata.Pages', 'main-menu-item', 'side-menu-item2');
+        BackendMenu::setContext('HumlnetCreative.Pages', 'main-menu-item', 'side-menu-item2');
     }
 
 }

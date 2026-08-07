@@ -1,6 +1,6 @@
 <?php
 
-namespace LZaplata\Pages\Updates;
+namespace HumlnetCreative\Pages\Updates;
 
 use October\Rain\Database\Updates\Migration;
 use October\Rain\Support\Facades\Schema;

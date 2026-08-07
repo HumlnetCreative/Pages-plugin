@@ -1,7 +1,7 @@
-<?php namespace LZaplata\Pages\Components;
+<?php namespace HumlnetCreative\Pages\Components;
 
 use Cms\Classes\ComponentBase;
-use LZaplata\Pages\Models\Page as PageModel;
+use HumlnetCreative\Pages\Models\Page as PageModel;
 use October\Rain\Database\Collection;
 use October\Rain\Support\Facades\Event;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -52,8 +52,8 @@ class Page extends ComponentBase
     public function componentDetails()
     {
         return [
-            "name" => "lzaplata.pages::lang.component.page.name",
-            "description" => "lzaplata.pages::lang.component.page.description",
+            "name" => "humlnetcreative.pages::lang.component.page.name",
+            "description" => "humlnetcreative.pages::lang.component.page.description",
         ];
     }
 
@@ -64,8 +64,8 @@ class Page extends ComponentBase
     {
         return [
             "column" => [
-                "title" => "lzaplata.pages::lang.component.page.column.title",
-                "description" => "lzaplata.pages::lang.component.page.column.description",
+                "title" => "humlnetcreative.pages::lang.component.page.column.title",
+                "description" => "humlnetcreative.pages::lang.component.page.column.description",
                 "type" => "dropdown",
                 "options" => [
                     "slug"      => "Slug",
@@ -74,8 +74,8 @@ class Page extends ComponentBase
                 "default" => "slug",
             ],
             "value" => [
-                "title"         => "lzaplata.pages::lang.component.page.value.title",
-                "description"   => "lzaplata.pages::lang.component.page.value.description",
+                "title"         => "humlnetcreative.pages::lang.component.page.value.title",
+                "description"   => "humlnetcreative.pages::lang.component.page.value.description",
                 "type"          => "string",
                 "default"       => "{{ :slug }}",
             ],

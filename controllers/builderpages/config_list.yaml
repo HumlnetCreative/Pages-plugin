@@ -1,0 +1,9 @@
+modelClass: HumlnetCreative\Pages\Models\BuilderPage
+list: $/humlnetcreative/pages/models/builder/columns.yaml
+recordUrl: humlnetcreative/pages/builderpages/update/:id
+showTree: true
+treeExpanded: true
+toolbar:
+    buttons: list_toolbar
+    search:
+        prompt: Hledat stránku

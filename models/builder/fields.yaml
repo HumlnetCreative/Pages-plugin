@@ -1,0 +1,53 @@
+tabs:
+    fields:
+        title:
+            label: Název stránky
+            span: left
+            type: text
+            required: true
+        slug:
+            label: Slug
+            span: right
+            type: text
+            preset:
+                field: title
+                type: slug
+        parent:
+            label: Nadřazená stránka
+            type: relation
+            nameFrom: title
+            span: left
+        is_home:
+            label: Úvodní stránka
+            type: switch
+            span: right
+        is_published:
+            label: Zobrazit na webu
+            type: switch
+            default: true
+            span: left
+        fullslug:
+            label: Výsledná cesta
+            type: text
+            readOnly: true
+            span: right
+        sections:
+            tab: Obsah
+            type: partial
+            path: $/humlnetcreative/pages/models/builder/_sections.htm
+        style[color_scheme]:
+            tab: Vzhled
+            label: Výchozí barevné schéma stránky
+            type: colorschemeselector
+            comment: Nevyplněno = výchozí schéma theme. Sekce mohou tuto volbu přepsat.
+        meta_title:
+            tab: SEO
+            label: Titulek pro vyhledávače
+            type: text
+            span: full
+        meta_description:
+            tab: SEO
+            label: Meta popis
+            type: textarea
+            size: small
+            span: full

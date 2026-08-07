@@ -1,0 +1,53 @@
+sections:
+    label: Sekce stránky
+    customMessages:
+        buttonCreate: Přidat sekci
+        buttonCreateForm: Přidat
+        buttonCancelForm: Zrušit
+        buttonCloseForm: Zavřít
+        buttonUpdate: Upravit sekci
+        buttonUpdateForm: Uložit změny
+        buttonDelete: Odstranit
+        confirmDelete: Opravdu chcete odstranit vybrané sekce?
+        titleCreateForm: Přidat sekci
+        titleUpdateForm: Upravit sekci
+        flashCreate: Sekce byla přidána.
+        flashUpdate: Sekce byla uložena.
+        flashDelete: Sekce byly odstraněny.
+    view:
+        list: $/humlnetcreative/pages/models/section/columns.yaml
+        toolbarButtons: delete
+        structure:
+            showReorder: true
+            showTree: false
+            showSorting: false
+    manage:
+        form: $/humlnetcreative/pages/models/section/fields.yaml
+        recordsPerPage: 50
+items:
+    label: Položky sekce
+    valueFrom: sections[items]
+    customMessages:
+        buttonCreate: Přidat položku
+        buttonCreateForm: Přidat
+        buttonCancelForm: Zrušit
+        buttonCloseForm: Zavřít
+        buttonUpdate: Upravit položku
+        buttonUpdateForm: Uložit změny
+        buttonDelete: Odstranit
+        confirmDelete: Opravdu chcete odstranit vybrané položky?
+        titleCreateForm: Přidat položku
+        titleUpdateForm: Upravit položku
+        flashCreate: Položka byla přidána.
+        flashUpdate: Položka byla uložena.
+        flashDelete: Položky byly odstraněny.
+    view:
+        list: $/humlnetcreative/pages/models/sectionitem/columns.yaml
+        toolbarButtons: create|delete
+        structure:
+            showReorder: true
+            showTree: false
+            showSorting: false
+    manage:
+        form: $/humlnetcreative/pages/models/sectionitem/fields.yaml
+        recordsPerPage: 100

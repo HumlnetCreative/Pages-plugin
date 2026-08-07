@@ -1,5 +1,5 @@
 {
-    "name": "lzaplata/pages-plugin",
+    "name": "humlnetcreative/pages-plugin",
     "type": "october-plugin",
     "description": "Plugin for pages and its content management",
     "require": {

@@ -1,44 +1,44 @@
 fields:
     is_published:
-        label: 'lzaplata.pages::lang.content.field.is_published.label'
+        label: 'humlnetcreative.pages::lang.content.field.is_published.label'
         type: switch
         default: true
     title:
-        label: 'lzaplata.pages::lang.content.field.title.label'
+        label: 'humlnetcreative.pages::lang.content.field.title.label'
         span: left
         type: text
-        comment: "lzaplata.pages::lang.content.field.title.comment"
+        comment: "humlnetcreative.pages::lang.content.field.title.comment"
     type:
-        label: 'lzaplata.pages::lang.content.field.type.label'
+        label: 'humlnetcreative.pages::lang.content.field.type.label'
         optionsMethod: getTypeOptions
         showSearch: true
         span: right
         type: dropdown
     heading:
-        label: 'lzaplata.pages::lang.content.field.heading.label'
+        label: 'humlnetcreative.pages::lang.content.field.heading.label'
         span: left
         type: text
-        comment: 'lzaplata.pages::lang.content.field.heading.comment'
+        comment: 'humlnetcreative.pages::lang.content.field.heading.comment'
         trigger:
             action: show
             field: type
             condition: 'value[text][posts][gallery][files][faq][cookies][contacts][pricelist][opening_hours][slider][embed][image_text][jobs][links][partial][contact_form][timeline][flash_message]'
     sort_order:
-        label: 'lzaplata.pages::lang.content.field.sort_order.label'
+        label: 'humlnetcreative.pages::lang.content.field.sort_order.label'
         span: right
         type: number
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
         required: 1
     is_fluid:
-        label: 'lzaplata.pages::lang.content.field.is_fluid.label'
+        label: 'humlnetcreative.pages::lang.content.field.is_fluid.label'
         span: left
         type: switch
     no_gutters:
-        label: 'lzaplata.pages::lang.content.field.no_gutters.label'
+        label: 'humlnetcreative.pages::lang.content.field.no_gutters.label'
         span: left
         type: switch
     no_gutters_breakpoint:
-        label: 'lzaplata.pages::lang.content.field.no_gutters_breakpoint.label'
+        label: 'humlnetcreative.pages::lang.content.field.no_gutters_breakpoint.label'
         span: left
         type: dropdown
         default: lg
@@ -49,32 +49,32 @@ fields:
     padding:
         type: nestedform
         span: full
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
         form:
             fields:
                 top:
-                    label: 'lzaplata.pages::lang.content.field.padding_top.label'
+                    label: 'humlnetcreative.pages::lang.content.field.padding_top.label'
                     type: rangeselector
                     span: auto
                     max: 10
                     default: 7
 
                 bottom:
-                    label: 'lzaplata.pages::lang.content.field.padding_bottom.label'
+                    label: 'humlnetcreative.pages::lang.content.field.padding_bottom.label'
                     type: rangeselector
                     span: auto
                     max: 10
                     default: 7
 
                 top_sm:
-                    label: 'lzaplata.pages::lang.content.field.padding_top_sm.label'
+                    label: 'humlnetcreative.pages::lang.content.field.padding_top_sm.label'
                     type: rangeselector
                     span: auto
                     max: 10
                     default: 5
 
                 bottom_sm:
-                    label: 'lzaplata.pages::lang.content.field.padding_bottom_sm.label'
+                    label: 'humlnetcreative.pages::lang.content.field.padding_bottom_sm.label'
                     type: rangeselector
                     span: auto
                     max: 10
@@ -82,11 +82,11 @@ fields:
     border:
         type: nestedform
         span: full
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
         form:
             fields:
                 top:
-                    label: 'lzaplata.pages::lang.content.field.border_top.label'
+                    label: 'humlnetcreative.pages::lang.content.field.border_top.label'
                     type: rangeselector
                     span: auto
                     max: 10
@@ -94,14 +94,14 @@ fields:
                     default: 0
 
                 bottom:
-                    label: 'lzaplata.pages::lang.content.field.border_bottom.label'
+                    label: 'humlnetcreative.pages::lang.content.field.border_bottom.label'
                     type: rangeselector
                     span: auto
                     max: 10
                     unit: px
                     default: 0
     text:
-        label: 'lzaplata.pages::lang.content.field.text.label'
+        label: 'humlnetcreative.pages::lang.content.field.text.label'
         size: giant
         span: full
         trigger:
@@ -110,19 +110,19 @@ fields:
             condition: 'value[text][image_text]'
         type: richeditor
     posts_category:
-        label: 'lzaplata.pages::lang.content.field.posts_categories.label'
+        label: 'humlnetcreative.pages::lang.content.field.posts_categories.label'
         span: left
         type: relation
-        emptyOption: 'lzaplata.pages::lang.content.field.posts_categories.empty_option'
+        emptyOption: 'humlnetcreative.pages::lang.content.field.posts_categories.empty_option'
         trigger:
             action: show
             field: type
             condition: 'value[posts]'
     gallery:
-        label: 'lzaplata.pages::lang.content.field.gallery.label'
+        label: 'humlnetcreative.pages::lang.content.field.gallery.label'
         nameFrom: name
         descriptionFrom: description
-        emptyOption: 'lzaplata.pages::lang.content.field.gallery.prompt'
+        emptyOption: 'humlnetcreative.pages::lang.content.field.gallery.prompt'
         span: left
         type: relation
         trigger:
@@ -130,7 +130,7 @@ fields:
             field: type
             condition: 'value[gallery]'
     files_category:
-        label: 'lzaplata.pages::lang.content.field.files_categories.label'
+        label: 'humlnetcreative.pages::lang.content.field.files_categories.label'
         span: left
         type: relation
         trigger:
@@ -138,7 +138,7 @@ fields:
             field: type
             condition: 'value[files]'
     flashmessages_category:
-        label: 'lzaplata.pages::lang.content.field.flashmessages_categories.label'
+        label: 'humlnetcreative.pages::lang.content.field.flashmessages_categories.label'
         span: left
         type: relation
         trigger:
@@ -146,7 +146,7 @@ fields:
             field: type
             condition: 'value[flash_message]'
     contacts_category:
-        label: 'lzaplata.pages::lang.content.field.contacts_categories.label'
+        label: 'humlnetcreative.pages::lang.content.field.contacts_categories.label'
         span: left
         type: relation
         nameFrom: title
@@ -155,7 +155,7 @@ fields:
             field: type
             condition: 'value[contacts]'
     pricelist:
-        label: 'lzaplata.pages::lang.content.field.pricelist.label'
+        label: 'humlnetcreative.pages::lang.content.field.pricelist.label'
         nameFrom: name
         span: left
         type: relation
@@ -165,7 +165,7 @@ fields:
             field: type
             condition: 'value[pricelist]'
     opening_hours:
-        label: 'lzaplata.pages::lang.content.field.opening_hours.label'
+        label: 'humlnetcreative.pages::lang.content.field.opening_hours.label'
         nameFrom: name
         span: left
         type: relation
@@ -175,7 +175,7 @@ fields:
             field: type
             condition: 'value[opening_hours]'
     slider:
-        label: 'lzaplata.pages::lang.content.field.slider.label'
+        label: 'humlnetcreative.pages::lang.content.field.slider.label'
         nameFrom: title
         span: left
         type: relation
@@ -185,7 +185,7 @@ fields:
             field: type
             condition: 'value[slider]'
     embed:
-        label: 'lzaplata.pages::lang.content.field.embed.label'
+        label: 'humlnetcreative.pages::lang.content.field.embed.label'
         span: left
         type: textarea
         trigger:
@@ -193,7 +193,7 @@ fields:
             field: type
             condition: 'value[embed]'
     jobs_category:
-        label: 'lzaplata.pages::lang.content.field.jobs_categories.label'
+        label: 'humlnetcreative.pages::lang.content.field.jobs_categories.label'
         span: left
         type: relation
         nameFrom: title
@@ -202,7 +202,7 @@ fields:
             field: type
             condition: 'value[jobs]'
     links_category:
-        label: 'lzaplata.pages::lang.content.field.links_categories.label'
+        label: 'humlnetcreative.pages::lang.content.field.links_categories.label'
         span: left
         type: relation
         nameFrom: title
@@ -211,10 +211,10 @@ fields:
             field: type
             condition: 'value[links][links_slider]'
     partial:
-        label: 'lzaplata.pages::lang.content.field.partial.label'
+        label: 'humlnetcreative.pages::lang.content.field.partial.label'
         span: right
         type: dropdown
-        permissions: lzaplata.pages.content.update.partial
+        permissions: humlnetcreative.pages.content.update.partial
         trigger:
             action: show
             field: type
@@ -222,11 +222,11 @@ fields:
         dependsOn:
             - type
     row_cols:
-        label: 'lzaplata.pages::lang.content.field.row_cols.label'
+        label: 'humlnetcreative.pages::lang.content.field.row_cols.label'
         span: left
         type: dropdown
         default: 4
-        permissions: lzaplata.pages.content.update.row_cols
+        permissions: humlnetcreative.pages.content.update.row_cols
         trigger:
             action: show
             field: type
@@ -234,7 +234,7 @@ fields:
         dependsOn:
             - partial
     items_per_page:
-        label: 'lzaplata.pages::lang.content.field.items_per_page.label'
+        label: 'humlnetcreative.pages::lang.content.field.items_per_page.label'
         span: right
         default: 12
         trigger:
@@ -244,7 +244,7 @@ fields:
         dependsOn:
             - partial
     image:
-        label: 'lzaplata.pages::lang.content.field.image.label'
+        label: 'humlnetcreative.pages::lang.content.field.image.label'
         span: left
         type: fileupload
         maxItems: 1
@@ -254,7 +254,7 @@ fields:
             field: type
             condition: 'value[image_text]'
     switch_order:
-        label: 'lzaplata.pages::lang.content.field.switch_order.label'
+        label: 'humlnetcreative.pages::lang.content.field.switch_order.label'
         span: left
         type: switch
         default: false
@@ -263,10 +263,10 @@ fields:
             field: type
             condition: 'value[image_text]'
     post_partial:
-        label: 'lzaplata.pages::lang.content.field.post_partial.label'
+        label: 'humlnetcreative.pages::lang.content.field.post_partial.label'
         span: right
         type: dropdown
-        permissions: lzaplata.pages.content.update.partial
+        permissions: humlnetcreative.pages.content.update.partial
         trigger:
             action: show
             field: type
@@ -274,19 +274,19 @@ fields:
         dependsOn:
             - type
     posts_sort_order:
-        label: 'lzaplata.pages::lang.content.field.posts_sort_order.label'
+        label: 'humlnetcreative.pages::lang.content.field.posts_sort_order.label'
         span: left
         type: dropdown
-        permissions: lzaplata.pages.content.update.posts_sort_order
+        permissions: humlnetcreative.pages.content.update.posts_sort_order
         trigger:
             action: show
             field: type
             condition: 'value[posts]'
     variables:
-        label: 'lzaplata.pages::lang.content.field.variables.label'
+        label: 'humlnetcreative.pages::lang.content.field.variables.label'
         span: right
         type: repeater
-        prompt: 'lzaplata.pages::lang.content.field.variables.prompt'
+        prompt: 'humlnetcreative.pages::lang.content.field.variables.prompt'
         itemsExpanded: false
         trigger:
             action: show
@@ -295,17 +295,17 @@ fields:
         form:
             fields:
                 name:
-                    label: 'lzaplata.pages::lang.content.field.variables.field.name.label'
+                    label: 'humlnetcreative.pages::lang.content.field.variables.field.name.label'
                     span: left
                 type:
-                    label: 'lzaplata.pages::lang.content.field.variables.field.type.label'
+                    label: 'humlnetcreative.pages::lang.content.field.variables.field.type.label'
                     span: right
                     type: dropdown
                     options:
-                        text: 'lzaplata.pages::lang.content.field.variables.field.type.option.text.label'
-                        link: 'lzaplata.pages::lang.content.field.variables.field.type.option.link.label'
+                        text: 'humlnetcreative.pages::lang.content.field.variables.field.type.option.text.label'
+                        link: 'humlnetcreative.pages::lang.content.field.variables.field.type.option.link.label'
                 value:
-                    label: 'lzaplata.pages::lang.content.field.variables.field.value.label'
+                    label: 'humlnetcreative.pages::lang.content.field.variables.field.value.label'
                     span: left
                     trigger:
                         action: show
@@ -313,7 +313,7 @@ fields:
                         condition: 'value[text]'
 
                 link:
-                    label: 'lzaplata.pages::lang.content.field.variables.field.link.label'
+                    label: 'humlnetcreative.pages::lang.content.field.variables.field.link.label'
                     type: pagefinder
                     span: left
                     trigger:
@@ -321,7 +321,7 @@ fields:
                         field: type
                         condition: 'value[link]'
     timeline:
-        label: 'lzaplata.pages::lang.content.field.timeline.label'
+        label: 'humlnetcreative.pages::lang.content.field.timeline.label'
         nameFrom: name
         span: left
         type: relation
@@ -332,15 +332,15 @@ fields:
             condition: 'value[timeline]'
 
     options_inherited:
-        label: 'lzaplata.pages::lang.content.field.options_inherited.label'
+        label: 'humlnetcreative.pages::lang.content.field.options_inherited.label'
         type: switch
         span: left
         default: true
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
 
     options_text:
         type: nestedform
-        form: $/lzaplata/pages/models/block/text.yaml
+        form: $/humlnetcreative/pages/models/block/text.yaml
         dependsOn:
             - type
             - options_inherited
@@ -348,11 +348,11 @@ fields:
             action: show
             field: type
             condition: 'value[text]'
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
 
     options_image_text:
         type: nestedform
-        form: $/lzaplata/pages/models/block/image-text.yaml
+        form: $/humlnetcreative/pages/models/block/image-text.yaml
         dependsOn:
             - type
             - options_inherited
@@ -360,11 +360,11 @@ fields:
             action: show
             field: type
             condition: 'value[image_text]'
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
 
     options_slider:
         type: nestedform
-        form: $/lzaplata/pages/models/block/slider.yaml
+        form: $/humlnetcreative/pages/models/block/slider.yaml
         dependsOn:
             - type
             - options_inherited
@@ -372,11 +372,11 @@ fields:
             action: show
             field: type
             condition: 'value[slider]'
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
 
     options_links:
         type: nestedform
-        form: $/lzaplata/pages/models/block/links.yaml
+        form: $/humlnetcreative/pages/models/block/links.yaml
         dependsOn:
             - type
             - options_inherited
@@ -384,11 +384,11 @@ fields:
             action: show
             field: type
             condition: 'value[links][links_slider]'
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
 
     options_partial:
         type: nestedform
-        form: $/lzaplata/pages/models/block/partial.yaml
+        form: $/humlnetcreative/pages/models/block/partial.yaml
         dependsOn:
             - type
             - options_inherited
@@ -396,11 +396,11 @@ fields:
             action: show
             field: type
             condition: 'value[partial][embed][contact_form][files][pricelist][cookies]'
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
 
     options_posts:
         type: nestedform
-        form: $/lzaplata/pages/models/block/posts.yaml
+        form: $/humlnetcreative/pages/models/block/posts.yaml
         dependsOn:
             - type
             - options_inherited
@@ -408,11 +408,11 @@ fields:
             action: show
             field: type
             condition: 'value[posts]'
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
 
     options_jobs:
         type: nestedform
-        form: $/lzaplata/pages/models/content/jobs.yaml
+        form: $/humlnetcreative/pages/models/content/jobs.yaml
         dependsOn:
             - type
             - options_inherited
@@ -420,11 +420,11 @@ fields:
             action: show
             field: type
             condition: 'value[jobs]'
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
 
     options_contacts:
         type: nestedform
-        form: $/lzaplata/pages/models/content/contacts.yaml
+        form: $/humlnetcreative/pages/models/content/contacts.yaml
         dependsOn:
             - type
             - options_inherited
@@ -432,11 +432,11 @@ fields:
             action: show
             field: type
             condition: 'value[contacts]'
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
 
     options_gallery:
         type: nestedform
-        form: $/lzaplata/pages/models/content/gallery.yaml
+        form: $/humlnetcreative/pages/models/content/gallery.yaml
         dependsOn:
             - type
             - options_inherited
@@ -444,11 +444,11 @@ fields:
             action: show
             field: type
             condition: 'value[gallery]'
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
 
     options_accordion:
         type: nestedform
-        form: $/lzaplata/pages/models/content/accordion.yaml
+        form: $/humlnetcreative/pages/models/content/accordion.yaml
         dependsOn:
             - type
             - options_inherited
@@ -456,11 +456,11 @@ fields:
             action: show
             field: type
             condition: 'value[faq]'
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder
 
     options_timeline:
         type: nestedform
-        form: $/lzaplata/pages/models/content/timeline.yaml
+        form: $/humlnetcreative/pages/models/content/timeline.yaml
         dependsOn:
             - type
             - options_inherited
@@ -468,4 +468,4 @@ fields:
             action: show
             field: type
             condition: 'value[timeline]'
-        permissions: lzaplata.pages.content.reorder
+        permissions: humlnetcreative.pages.content.reorder

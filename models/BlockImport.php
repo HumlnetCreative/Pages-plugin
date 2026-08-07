@@ -1,6 +1,6 @@
 <?php
 
-namespace LZaplata\Pages\Models;
+namespace HumlnetCreative\Pages\Models;
 
 use Backend\Models\ImportModel;
 use Illuminate\Support\Facades\DB;

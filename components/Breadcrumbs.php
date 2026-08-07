@@ -1,9 +1,9 @@
-<?php namespace LZaplata\Pages\Components;
+<?php namespace HumlnetCreative\Pages\Components;
 
 use Cms\Classes\ComponentBase;
 use Cms\Classes\PageManager;
 use Cms\Classes\Theme;
-use LZaplata\Pages\Models\Page;
+use HumlnetCreative\Pages\Models\Page;
 
 /**
  * Breadcrumbs Component
@@ -15,8 +15,8 @@ class Breadcrumbs extends ComponentBase
     public function componentDetails()
     {
         return [
-            "name" => "lzaplata.pages::lang.component.breadcrumbs.name",
-            "description" => "lzaplata.pages::lang.component.breadcrumbs.description",
+            "name" => "humlnetcreative.pages::lang.component.breadcrumbs.name",
+            "description" => "humlnetcreative.pages::lang.component.breadcrumbs.description",
         ];
     }
 

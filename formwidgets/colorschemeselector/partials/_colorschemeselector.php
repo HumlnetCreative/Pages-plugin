@@ -8,6 +8,22 @@
 
     <div class="form-container color-scheme">
 
+        <div class="form-check <?php if (!$value): ?>checked<?php endif; ?>">
+            <input
+                type="radio"
+                name="<?= $name ?>"
+                value="__inherit__"
+                id="<?= $id ?>--inherit"
+                class="form-check-input"
+                <?php if (!$value): ?>checked<?php endif; ?>>
+            <label for="<?= $id ?>--inherit" class="form-check-label">
+                <div class="visual visual-inherit">
+                    <span class="text">↳</span>
+                </div>
+                <div class="name">Dědit z nadřazené úrovně</div>
+            </label>
+        </div>
+
         <?php foreach ($options as $key => $option): ?>
             <?php $schemeKey = $option['key'] ?? (string) $key; ?>
             <div class="form-check <?php if ($schemeKey == $value): ?>checked<?php endif; ?>" style="--cs-bg: <?= $option["bg"] ?>; --cs-text: <?= $option["text"] ?>;">

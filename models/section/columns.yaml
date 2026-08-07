@@ -1,0 +1,9 @@
+columns:
+    title:
+        label: Sekce
+        searchable: true
+    type_label:
+        label: Typ
+    is_published:
+        label: Viditelná
+        type: switch

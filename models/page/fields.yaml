@@ -1,13 +1,13 @@
 tabs:
     fields:
         title:
-            label: 'lzaplata.pages::lang.page.field.title.label'
+            label: 'humlnetcreative.pages::lang.page.field.title.label'
             span: left
             required: 1
             type: text
-            permissions: lzaplata.pages.page.update
+            permissions: humlnetcreative.pages.page.update
         slug:
-            label: 'lzaplata.pages::lang.page.field.slug.label'
+            label: 'humlnetcreative.pages::lang.page.field.slug.label'
             span: right
             required: 1
             defaultFrom: title
@@ -15,49 +15,49 @@ tabs:
                 field: title
                 type: slug
             type: text
-            permissions: lzaplata.pages.page.update
+            permissions: humlnetcreative.pages.page.update
         parent:
-            label: 'lzaplata.pages::lang.page.field.parent.label'
+            label: 'humlnetcreative.pages::lang.page.field.parent.label'
             nameFrom: title
-            emptyOption: 'lzaplata.pages::lang.page.field.parent.prompt'
+            emptyOption: 'humlnetcreative.pages::lang.page.field.parent.prompt'
             span: left
             type: relation
             modelScope: filterParents
-            permissions: lzaplata.pages.page.update
+            permissions: humlnetcreative.pages.page.update
         fullslug:
-            label: 'lzaplata.pages::lang.page.field.fullslug.label'
+            label: 'humlnetcreative.pages::lang.page.field.fullslug.label'
             span: auto
             type: text
             required: 1
-            permissions: lzaplata.pages.page.update
+            permissions: humlnetcreative.pages.page.update
             defaultFrom: title
             dependsOn:
                 - parent
                 - title
                 - slug
         menu:
-            label: 'lzaplata.pages::lang.page.field.menu.label'
+            label: 'humlnetcreative.pages::lang.page.field.menu.label'
             span: left
             type: dropdown
             dependsOn:
                 - parent
-            permissions: lzaplata.pages.page.update
-            emptyOption: 'lzaplata.pages::lang.page.field.menu.prompt'
+            permissions: humlnetcreative.pages.page.update
+            emptyOption: 'humlnetcreative.pages::lang.page.field.menu.prompt'
         slider:
-            label: 'lzaplata.pages::lang.page.field.slider.label'
+            label: 'humlnetcreative.pages::lang.page.field.slider.label'
             span: right
             type: relation
             nameFrom: title
-            permissions: lzaplata.pages.page.slider
-            emptyOption: 'lzaplata.pages::lang.page.field.slider.prompt'
+            permissions: humlnetcreative.pages.page.slider
+            emptyOption: 'humlnetcreative.pages::lang.page.field.slider.prompt'
         breadcrumb:
-            label: 'lzaplata.pages::lang.page.field.breadcrumb.label'
+            label: 'humlnetcreative.pages::lang.page.field.breadcrumb.label'
             type: dropdown
             span: left
             options:
-                auto: 'lzaplata.pages::lang.page.field.breadcrumb.option.auto'
-                manual: 'lzaplata.pages::lang.page.field.breadcrumb.option.manual'
-            permissions: lzaplata.pages.page.update
+                auto: 'humlnetcreative.pages::lang.page.field.breadcrumb.option.auto'
+                manual: 'humlnetcreative.pages::lang.page.field.breadcrumb.option.manual'
+            permissions: humlnetcreative.pages.page.update
             value: auto
         breadcrumb_url:
             label: "\_"
@@ -68,33 +68,33 @@ tabs:
                 condition: value[manual]
             type: pagefinder
         sort_order:
-            label: 'lzaplata.pages::lang.page.field.sort_order.label'
+            label: 'humlnetcreative.pages::lang.page.field.sort_order.label'
             span: left
             type: number
             dependsOn:
                 - parent
                 - title
-            permissions: lzaplata.pages.page.reorder
+            permissions: humlnetcreative.pages.page.reorder
             required: 1
         contents:
             type: partial
-            path: $/lzaplata/pages/models/page/_contents.htm
-            permissions: lzaplata.pages.content
+            path: $/humlnetcreative/pages/models/page/_contents.htm
+            permissions: humlnetcreative.pages.content
         meta_title:
-            label: 'lzaplata.pages::lang.page.field.meta_title.label'
+            label: 'humlnetcreative.pages::lang.page.field.meta_title.label'
             span: left
-            commentAbove: 'lzaplata.pages::lang.page.field.meta_title.comment'
-            tab: 'lzaplata.pages::lang.page.tab.meta.label'
+            commentAbove: 'humlnetcreative.pages::lang.page.field.meta_title.comment'
+            tab: 'humlnetcreative.pages::lang.page.tab.meta.label'
             attributes:
                 data-counter: 1
                 data-min: 30
                 data-max: 60
                 data-seo: title
         meta_description:
-            label: 'lzaplata.pages::lang.page.field.meta_description.label'
+            label: 'humlnetcreative.pages::lang.page.field.meta_description.label'
             type: textarea
             span: left
-            tab: 'lzaplata.pages::lang.page.tab.meta.label'
+            tab: 'humlnetcreative.pages::lang.page.tab.meta.label'
             attributes:
                 data-counter: 1
                 data-min: 100

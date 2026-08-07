@@ -1,4 +1,4 @@
-<?php namespace LZaplata\Pages\Models;
+<?php namespace HumlnetCreative\Pages\Models;
 
 use Backend\Facades\BackendAuth;
 use Cms\Classes\Partial;
@@ -6,10 +6,10 @@ use Cms\Classes\Theme;
 use Cms\Models\ThemeData;
 use Illuminate\Support\Facades\Lang;
 use JanVince\SmallGDPR\Models\CookiesSettings;
-use LZaplata\Files\Models\Category as FilesCategory;
+use HumlnetCreative\Files\Models\Category as FilesCategory;
 use LZaplata\FlashMessages\Models\Category as FlashMessagesCategory;
 use LZaplata\FlashMessages\Models\Message;
-use LZaplata\Files\Models\File;
+use HumlnetCreative\Files\Models\File;
 use LZaplata\Gallery\Models\Gallery;
 use LZaplata\OpeningHours\Models\OpeningHour;
 use LZaplata\Pricelists\Models\Pricelist;
@@ -80,29 +80,29 @@ class Content extends Model
     {
         $types = [
             "text"          => "Text",
-            "image_text"    => e(trans("lzaplata.pages::lang.content.field.type.option.image_text.label")),
-            "embed"         => e(trans("lzaplata.pages::lang.content.field.type.option.embed.label")),
-            "partial"       => e(trans("lzaplata.pages::lang.content.field.type.option.partial.label")),
+            "image_text"    => e(trans("humlnetcreative.pages::lang.content.field.type.option.image_text.label")),
+            "embed"         => e(trans("humlnetcreative.pages::lang.content.field.type.option.embed.label")),
+            "partial"       => e(trans("humlnetcreative.pages::lang.content.field.type.option.partial.label")),
         ];
 
         if (class_exists(Post::class)) {
-            $types["posts"] = e(trans("lzaplata.pages::lang.content.field.type.option.posts.label"));
+            $types["posts"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.posts.label"));
         }
 
         if (class_exists(Gallery::class)) {
-            $types["gallery"] = e(trans("lzaplata.pages::lang.content.field.type.option.gallery.label"));
+            $types["gallery"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.gallery.label"));
         }
 
         if (class_exists(File::class)) {
-            $types["files"] = e(trans("lzaplata.pages::lang.content.field.type.option.files.label"));
+            $types["files"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.files.label"));
         }
 
         if (class_exists(Pricelist::class)) {
-            $types["pricelist"] = e(trans("lzaplata.pages::lang.content.field.type.option.pricelist.label"));
+            $types["pricelist"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.pricelist.label"));
         }
 
         if (class_exists(OpeningHour::class)) {
-            $types["opening_hours"] = e(trans("lzaplata.pages::lang.content.field.type.option.opening_hours.label"));
+            $types["opening_hours"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.opening_hours.label"));
         }
 
         if (BlueprintIndexer::instance()->findSectionByHandle("FAQ\Question")) {
@@ -110,36 +110,36 @@ class Content extends Model
         }
 
         if (BlueprintIndexer::instance()->findSectionByHandle("Contacts\Contact")) {
-            $types["contacts"] = e(trans("lzaplata.pages::lang.content.field.type.option.contacts.label"));
+            $types["contacts"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.contacts.label"));
         }
 
         if (BlueprintIndexer::instance()->findSectionByHandle("Slider\Slider")) {
-            $types["slider"] = e(trans("lzaplata.pages::lang.content.field.type.option.slider.label"));
+            $types["slider"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.slider.label"));
         }
 
         if (BlueprintIndexer::instance()->findSectionByHandle("Jobs\Job")) {
-            $types["jobs"] = e(trans("lzaplata.pages::lang.content.field.type.option.jobs.label"));
+            $types["jobs"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.jobs.label"));
         }
 
         if (BlueprintIndexer::instance()->findSectionByHandle("Links\Link")) {
-            $types["links"]         = e(trans("lzaplata.pages::lang.content.field.type.option.links.label"));
-            $types["links_slider"]  = e(trans("lzaplata.pages::lang.content.field.type.option.links_slider.label"));
+            $types["links"]         = e(trans("humlnetcreative.pages::lang.content.field.type.option.links.label"));
+            $types["links_slider"]  = e(trans("humlnetcreative.pages::lang.content.field.type.option.links_slider.label"));
         }
 
         if (class_exists(CookiesSettings::class)) {
-            $types["cookies"] = e(trans("lzaplata.pages::lang.content.field.type.option.cookies.label"));
+            $types["cookies"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.cookies.label"));
         }
 
         if (class_exists(SmallContactFormSettings::class)) {
-            $types["contact_form"] = e(trans("lzaplata.pages::lang.content.field.type.option.contact_form.label"));
+            $types["contact_form"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.contact_form.label"));
         }
 
         if (class_exists(Timeline::class)) {
-            $types["timeline"] = e(trans("lzaplata.pages::lang.content.field.type.option.timeline.label"));
+            $types["timeline"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.timeline.label"));
         }
 
         if (class_exists(Message::class)) {
-            $types["flash_message"] = e(trans("lzaplata.pages::lang.content.field.type.option.flash_message.label"));
+            $types["flash_message"] = e(trans("humlnetcreative.pages::lang.content.field.type.option.flash_message.label"));
         }
 
         return $types;
@@ -275,51 +275,51 @@ class Content extends Model
      */
     public function filterFields($fields, $context = null)
     {
-        if (!BackendAuth::userHasPermission("lzaplata.pages.content.update.type")) {
+        if (!BackendAuth::userHasPermission("humlnetcreative.pages.content.update.type")) {
             $fields->type->disabled = true;
         }
 
-        if (!BackendAuth::userHasPermission("lzaplata.pages.content.update.posts_category")) {
+        if (!BackendAuth::userHasPermission("humlnetcreative.pages.content.update.posts_category")) {
             $fields->posts_category->disabled = true;
         }
 
-        if (!BackendAuth::userHasPermission("lzaplata.pages.content.update.files_category")) {
+        if (!BackendAuth::userHasPermission("humlnetcreative.pages.content.update.files_category")) {
             $fields->files_category->disabled = true;
         }
 
-        if (!BackendAuth::userHasPermission("lzaplata.pages.content.update.flashmessages_category")) {
+        if (!BackendAuth::userHasPermission("humlnetcreative.pages.content.update.flashmessages_category")) {
             $fields->flashmessages_category->disabled = true;
         }
 
-        if (!BackendAuth::userHasPermission("lzaplata.pages.content.update.contacts_category")) {
+        if (!BackendAuth::userHasPermission("humlnetcreative.pages.content.update.contacts_category")) {
             $fields->contacts_category->disabled = true;
         }
 
-        if (!BackendAuth::userHasPermission("lzaplata.pages.content.update.jobs_category")) {
+        if (!BackendAuth::userHasPermission("humlnetcreative.pages.content.update.jobs_category")) {
             $fields->jobs_category->disabled = true;
         }
 
-        if (!BackendAuth::userHasPermission("lzaplata.pages.content.update.links_category")) {
+        if (!BackendAuth::userHasPermission("humlnetcreative.pages.content.update.links_category")) {
             $fields->links_category->disabled = true;
         }
 
-        if (!BackendAuth::userHasPermission("lzaplata.pages.content.update.gallery")) {
+        if (!BackendAuth::userHasPermission("humlnetcreative.pages.content.update.gallery")) {
             $fields->gallery->disabled = true;
         }
 
-        if (!BackendAuth::userHasPermission("lzaplata.pages.content.update.pricelist")) {
+        if (!BackendAuth::userHasPermission("humlnetcreative.pages.content.update.pricelist")) {
             $fields->pricelist->disabled = true;
         }
 
-        if (!BackendAuth::userHasPermission("lzaplata.pages.content.update.opening_hours")) {
+        if (!BackendAuth::userHasPermission("humlnetcreative.pages.content.update.opening_hours")) {
             $fields->opening_hours->disabled = true;
         }
 
-        if (!BackendAuth::userHasPermission("lzaplata.pages.content.update.slider")) {
+        if (!BackendAuth::userHasPermission("humlnetcreative.pages.content.update.slider")) {
             $fields->slider->disabled = true;
         }
 
-        if (BackendAuth::userHasPermission("lzaplata.pages.content.reorder") && isset($fields->sort_order)) {
+        if (BackendAuth::userHasPermission("humlnetcreative.pages.content.reorder") && isset($fields->sort_order)) {
             $latestSibling = Content::where("page_id", $this->page->id)
                 ->orderBy("sort_order", "desc")
                 ->first();

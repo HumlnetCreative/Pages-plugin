@@ -1,37 +1,37 @@
 fields:
     is_published:
-        label: 'lzaplata.pages::lang.block.field.is_published.label'
+        label: 'humlnetcreative.pages::lang.block.field.is_published.label'
         type: switch
         default: true
         span: left
     title:
-        label: 'lzaplata.pages::lang.block.field.title.label'
+        label: 'humlnetcreative.pages::lang.block.field.title.label'
         span: left
         required: 1
         type: text
-        permissions: lzaplata.pages.block.update
-        comment: "lzaplata.pages::lang.block.field.title.comment"
+        permissions: humlnetcreative.pages.block.update
+        comment: "humlnetcreative.pages::lang.block.field.title.comment"
     heading:
-        label: 'lzaplata.pages::lang.block.field.heading.label'
+        label: 'humlnetcreative.pages::lang.block.field.heading.label'
         span: right
         type: text
-        comment: 'lzaplata.pages::lang.block.field.heading.comment'
+        comment: 'humlnetcreative.pages::lang.block.field.heading.comment'
     sort_order:
-        label: 'lzaplata.pages::lang.block.field.sort_order.label'
+        label: 'humlnetcreative.pages::lang.block.field.sort_order.label'
         span: left
         type: number
-        permissions: lzaplata.pages.block.reorder
+        permissions: humlnetcreative.pages.block.reorder
         required: 1
     is_fluid:
-        label: 'lzaplata.pages::lang.block.field.is_fluid.label'
+        label: 'humlnetcreative.pages::lang.block.field.is_fluid.label'
         span: left
         type: switch
     no_gutters:
-        label: 'lzaplata.pages::lang.block.field.no_gutters.label'
+        label: 'humlnetcreative.pages::lang.block.field.no_gutters.label'
         span: left
         type: switch
     no_gutters_breakpoint:
-        label: 'lzaplata.pages::lang.block.field.no_gutters_breakpoint.label'
+        label: 'humlnetcreative.pages::lang.block.field.no_gutters_breakpoint.label'
         span: left
         type: dropdown
         default: lg
@@ -45,28 +45,28 @@ fields:
         form:
             fields:
                 top:
-                    label: 'lzaplata.pages::lang.block.field.padding_top.label'
+                    label: 'humlnetcreative.pages::lang.block.field.padding_top.label'
                     type: rangeselector
                     span: auto
                     max: 10
                     default: 7
 
                 bottom:
-                    label: 'lzaplata.pages::lang.block.field.padding_bottom.label'
+                    label: 'humlnetcreative.pages::lang.block.field.padding_bottom.label'
                     type: rangeselector
                     span: auto
                     max: 10
                     default: 7
 
                 top_sm:
-                    label: 'lzaplata.pages::lang.block.field.padding_top_sm.label'
+                    label: 'humlnetcreative.pages::lang.block.field.padding_top_sm.label'
                     type: rangeselector
                     span: auto
                     max: 10
                     default: 5
 
                 bottom_sm:
-                    label: 'lzaplata.pages::lang.block.field.padding_bottom_sm.label'
+                    label: 'humlnetcreative.pages::lang.block.field.padding_bottom_sm.label'
                     type: rangeselector
                     span: auto
                     max: 10
@@ -77,7 +77,7 @@ fields:
         form:
             fields:
                 top:
-                    label: 'lzaplata.pages::lang.block.field.border_top.label'
+                    label: 'humlnetcreative.pages::lang.block.field.border_top.label'
                     type: rangeselector
                     span: auto
                     max: 10
@@ -85,21 +85,21 @@ fields:
                     default: 0
 
                 bottom:
-                    label: 'lzaplata.pages::lang.block.field.border_bottom.label'
+                    label: 'humlnetcreative.pages::lang.block.field.border_bottom.label'
                     type: rangeselector
                     span: auto
                     max: 10
                     unit: px
                     default: 0
     type:
-        label: 'lzaplata.pages::lang.block.field.type.label'
+        label: 'humlnetcreative.pages::lang.block.field.type.label'
         optionsMethod: getTypeOptions
         showSearch: true
         span: full
         type: blocktypeselector
         required: 1
     switch_order:
-        label: 'lzaplata.pages::lang.block.field.switch_order.label'
+        label: 'humlnetcreative.pages::lang.block.field.switch_order.label'
         span: left
         type: switch
         default: false
@@ -108,7 +108,7 @@ fields:
             field: type
             condition: 'values[image_text]'
     image:
-        label: 'lzaplata.pages::lang.block.field.image.label'
+        label: 'humlnetcreative.pages::lang.block.field.image.label'
         span: left
         type: fileupload
         maxItems: 1
@@ -118,7 +118,7 @@ fields:
             field: type
             condition: 'values[image_text]'
     text:
-        label: 'lzaplata.pages::lang.block.field.text.label'
+        label: 'humlnetcreative.pages::lang.block.field.text.label'
         span: full
         type: richeditor
         size: huge
@@ -127,25 +127,25 @@ fields:
             field: type
             condition: 'value[text][image_text]'
     posts_category:
-        label: 'lzaplata.pages::lang.block.field.posts_category.label'
+        label: 'humlnetcreative.pages::lang.block.field.posts_category.label'
         span: left
         type: relation
-        emptyOption: 'lzaplata.pages::lang.block.field.posts_category.empty_option'
+        emptyOption: 'humlnetcreative.pages::lang.block.field.posts_category.empty_option'
         trigger:
             action: show
             field: type
             condition: 'value[posts][posts_slider]'
     flashmessages_category:
-        label: 'lzaplata.pages::lang.block.field.flashmessages_category.label'
+        label: 'humlnetcreative.pages::lang.block.field.flashmessages_category.label'
         span: left
         type: relation
-        emptyOption: 'lzaplata.pages::lang.block.field.flashmessages_category.empty_option'
+        emptyOption: 'humlnetcreative.pages::lang.block.field.flashmessages_category.empty_option'
         trigger:
             action: show
             field: type
             condition: 'value[flash_message]'
     links_category:
-        label: 'lzaplata.pages::lang.block.field.links_category.label'
+        label: 'humlnetcreative.pages::lang.block.field.links_category.label'
         span: left
         type: relation
         nameFrom: title
@@ -154,7 +154,7 @@ fields:
             field: type
             condition: 'value[links][links_slider]'
     row_cols:
-        label: 'lzaplata.pages::lang.block.field.row_cols.label'
+        label: 'humlnetcreative.pages::lang.block.field.row_cols.label'
         span: left
         type: dropdown
         default: 4
@@ -163,7 +163,7 @@ fields:
             field: type
             condition: 'value[posts][posts_slider][links][links_slider]'
     items_per_page:
-        label: 'lzaplata.pages::lang.block.field.items_per_page.label'
+        label: 'humlnetcreative.pages::lang.block.field.items_per_page.label'
         span: right
         default: 4
         trigger:
@@ -171,7 +171,7 @@ fields:
             field: type
             condition: 'value[posts]'
     partial:
-        label: 'lzaplata.pages::lang.block.field.partial.label'
+        label: 'humlnetcreative.pages::lang.block.field.partial.label'
         span: left
         type: dropdown
         trigger:
@@ -181,7 +181,7 @@ fields:
         dependsOn:
             - type
     slider:
-        label: 'lzaplata.pages::lang.block.field.slider.label'
+        label: 'humlnetcreative.pages::lang.block.field.slider.label'
         span: left
         type: relation
         nameFrom: title
@@ -190,7 +190,7 @@ fields:
             field: type
             condition: 'value[slider]'
     embed:
-        label: 'lzaplata.pages::lang.block.field.embed.label'
+        label: 'humlnetcreative.pages::lang.block.field.embed.label'
         span: left
         type: textarea
         trigger:
@@ -198,7 +198,7 @@ fields:
             field: type
             condition: 'value[embed]'
     posts_sort_order:
-        label: 'lzaplata.pages::lang.block.field.posts_sort_order.label'
+        label: 'humlnetcreative.pages::lang.block.field.posts_sort_order.label'
         span: right
         type: dropdown
         trigger:
@@ -206,7 +206,7 @@ fields:
             field: type
             condition: 'value[posts][posts_slider]'
     more_button_is_published:
-        label: 'lzaplata.pages::lang.block.field.more_button_is_published.label'
+        label: 'humlnetcreative.pages::lang.block.field.more_button_is_published.label'
         type: switch
         default: false
         span: left
@@ -215,14 +215,14 @@ fields:
             field: type
             condition: 'value[posts][posts_slider][links][links_slider]'
     more_button_title:
-        label: 'lzaplata.pages::lang.block.field.more_button_title.label'
+        label: 'humlnetcreative.pages::lang.block.field.more_button_title.label'
         span: right
         trigger:
             action: show
             field: more_button_is_published
             condition: checked
     more_button_link:
-        label: 'lzaplata.pages::lang.block.field.more_button_link.label'
+        label: 'humlnetcreative.pages::lang.block.field.more_button_link.label'
         span: left
         type: pagefinder
         required: true
@@ -231,10 +231,10 @@ fields:
             field: type
             condition: 'value[posts][posts_slider][links][links_slider]'
     variables:
-        label: 'lzaplata.pages::lang.block.field.variables.label'
+        label: 'humlnetcreative.pages::lang.block.field.variables.label'
         span: right
         type: repeater
-        prompt: 'lzaplata.pages::lang.block.field.variables.prompt'
+        prompt: 'humlnetcreative.pages::lang.block.field.variables.prompt'
         itemsExpanded: false
         trigger:
             action: show
@@ -243,17 +243,17 @@ fields:
         form:
             fields:
                 name:
-                    label: 'lzaplata.pages::lang.block.field.variables.field.name.label'
+                    label: 'humlnetcreative.pages::lang.block.field.variables.field.name.label'
                     span: left
                 type:
-                    label: 'lzaplata.pages::lang.block.field.variables.field.type.label'
+                    label: 'humlnetcreative.pages::lang.block.field.variables.field.type.label'
                     span: right
                     type: dropdown
                     options:
-                        text: 'lzaplata.pages::lang.block.field.variables.field.type.option.text.label'
-                        link: 'lzaplata.pages::lang.block.field.variables.field.type.option.link.label'
+                        text: 'humlnetcreative.pages::lang.block.field.variables.field.type.option.text.label'
+                        link: 'humlnetcreative.pages::lang.block.field.variables.field.type.option.link.label'
                 value:
-                    label: 'lzaplata.pages::lang.block.field.variables.field.value.label'
+                    label: 'humlnetcreative.pages::lang.block.field.variables.field.value.label'
                     span: left
                     trigger:
                         action: show
@@ -261,7 +261,7 @@ fields:
                         condition: 'value[text]'
 
                 link:
-                    label: 'lzaplata.pages::lang.block.field.variables.field.link.label'
+                    label: 'humlnetcreative.pages::lang.block.field.variables.field.link.label'
                     type: pagefinder
                     span: left
                     trigger:
@@ -270,14 +270,14 @@ fields:
                         condition: 'value[link]'
 
     options_inherited:
-        label: 'lzaplata.pages::lang.block.field.options_inherited.label'
+        label: 'humlnetcreative.pages::lang.block.field.options_inherited.label'
         type: switch
         span: auto
         default: true
 
     options_slider:
         type: nestedform
-        form: $/lzaplata/pages/models/block/slider.yaml
+        form: $/humlnetcreative/pages/models/block/slider.yaml
         dependsOn:
             - type
             - options_inherited
@@ -288,7 +288,7 @@ fields:
 
     options_flash_message:
         type: nestedform
-        form: $/lzaplata/pages/models/block/flash-message.yaml
+        form: $/humlnetcreative/pages/models/block/flash-message.yaml
         dependsOn:
             - type
             - options_inherited
@@ -299,7 +299,7 @@ fields:
 
     options_links:
         type: nestedform
-        form: $/lzaplata/pages/models/block/links.yaml
+        form: $/humlnetcreative/pages/models/block/links.yaml
         dependsOn:
             - type
             - options_inherited
@@ -310,7 +310,7 @@ fields:
 
     options_image_text:
         type: nestedform
-        form: $/lzaplata/pages/models/block/image-text.yaml
+        form: $/humlnetcreative/pages/models/block/image-text.yaml
         dependsOn:
             - type
             - options_inherited
@@ -321,7 +321,7 @@ fields:
 
     options_text:
         type: nestedform
-        form: $/lzaplata/pages/models/block/text.yaml
+        form: $/humlnetcreative/pages/models/block/text.yaml
         dependsOn:
             - type
             - options_inherited
@@ -332,7 +332,7 @@ fields:
 
     options_posts:
         type: nestedform
-        form: $/lzaplata/pages/models/block/posts.yaml
+        form: $/humlnetcreative/pages/models/block/posts.yaml
         dependsOn:
             - type
             - options_inherited
@@ -343,7 +343,7 @@ fields:
 
     options_partial:
         type: nestedform
-        form: $/lzaplata/pages/models/block/partial.yaml
+        form: $/humlnetcreative/pages/models/block/partial.yaml
         dependsOn:
             - type
             - options_inherited

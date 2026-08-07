@@ -1,0 +1,11 @@
+<div class="layout">
+    <div class="layout-row"><div class="layout-cell">
+        <h3>Import kostry webu</h3>
+        <p>Import je jednorázový a funguje pouze do prázdného nového builderu. Existující obsah nikdy nepřepisuje.</p>
+        <form data-request="onPreview" data-request-files data-request-update="blueprints::preview: '#blueprint-result'">
+            <input type="file" name="blueprint" accept=".yaml,.yml" class="form-control" required>
+            <button class="btn btn-default mt-3">Ověřit manifest</button>
+        </form>
+        <div id="blueprint-result"></div>
+    </div></div>
+</div>

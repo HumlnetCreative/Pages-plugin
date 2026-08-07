@@ -1,16 +1,25 @@
-<?php namespace LZaplata\Pages;
+<?php namespace HumlnetCreative\Pages;
 
-use Lzaplata\Pages\Components\Breadcrumbs;
-use Lzaplata\Pages\Components\Homepage;
-use Lzaplata\Pages\FormWidgets\BlockTypeSelector;
-use Lzaplata\Pages\FormWidgets\ColorSchemeSelector;
-use Lzaplata\Pages\FormWidgets\RangeSelector;
-use LZaplata\Pages\Models\Page;
+use HumlnetCreative\Pages\Components\Breadcrumbs;
+use HumlnetCreative\Pages\Components\Homepage;
+use HumlnetCreative\Pages\FormWidgets\BlockTypeSelector;
+use HumlnetCreative\Pages\FormWidgets\ColorSchemeSelector;
+use HumlnetCreative\Pages\FormWidgets\RangeSelector;
+use HumlnetCreative\Pages\FormWidgets\SliderMedia;
+use HumlnetCreative\Pages\FormWidgets\SliderUsage;
+use HumlnetCreative\Pages\Models\Page;
+use HumlnetCreative\Pages\Models\SliderEntry;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use October\Rain\Support\Facades\Event;
 use System\Classes\PluginBase;
-use Lzaplata\Pages\Components\Page as PageComponent;
-use System\Classes\PluginManager;
-use Twig\Extra\String\StringExtension;
+use HumlnetCreative\Pages\Components\Page as PageComponent;
+use HumlnetCreative\Pages\Components\BuilderPage as BuilderPageComponent;
+use HumlnetCreative\Pages\Components\BuilderBreadcrumbs;
+use HumlnetCreative\Pages\Services\SectionRegistry;
+use Tailor\Models\EntryRecord;
+use Tailor\Models\StructureRecord;
+use HumlnetCreative\Pages\Services\SliderRecordLifecycle;
 
 /**
  * Plugin class
@@ -20,8 +29,27 @@ class Plugin extends PluginBase
     /**
      * register method, called when the plugin is first registered.
      */
-    public function register()
+    public function register(): void
     {
+        if (!Schema::hasTable('system_plugin_versions')) {
+            return;
+        }
+
+        DB::transaction(function(): void {
+            $legacyCode = 'LZaplata.Pages';
+            $pluginCode = 'HumlnetCreative.Pages';
+
+            if (!DB::table('system_plugin_versions')->where('code', $legacyCode)->exists()
+                || DB::table('system_plugin_versions')->where('code', $pluginCode)->exists()) {
+                return;
+            }
+
+            DB::table('system_plugin_versions')->where('code', $legacyCode)->update(['code' => $pluginCode]);
+
+            if (Schema::hasTable('system_plugin_history')) {
+                DB::table('system_plugin_history')->where('code', $legacyCode)->update(['code' => $pluginCode]);
+            }
+        });
     }
 
     /**
@@ -29,9 +57,40 @@ class Plugin extends PluginBase
      */
     public function boot()
     {
+        StructureRecord::extend(fn(StructureRecord $model) => SliderRecordLifecycle::bind($model));
+        SliderEntry::extend(fn(SliderEntry $model) => SliderRecordLifecycle::bind($model));
+
+        Event::listen('backend.page.beforeDisplay', function($controller) {
+            $isPagesController = str_starts_with($controller::class, 'HumlnetCreative\\Pages\\Controllers\\');
+            $isTailorController = str_starts_with($controller::class, 'Tailor\\Controllers\\');
+            if (!$isPagesController && !$isTailorController) {
+                return;
+            }
+            $assetUrl = static function(string $relativePath): string {
+                $absolutePath = __DIR__.'/assets/'.$relativePath;
+                $version = is_file($absolutePath) ? filemtime($absolutePath) : 1;
+                return '/plugins/humlnetcreative/pages/assets/'.$relativePath.'?v='.$version;
+            };
+            $controller->addJs($assetUrl('js/backend-save-hotkey.js'));
+            if ($isPagesController) {
+                $controller->addJs($assetUrl('js/backend-media-crop.js'));
+                $controller->addJs($assetUrl('js/backend-media-editor.js'));
+                $controller->addCss($assetUrl('css/backend-media-crop.css'));
+                $controller->addCss($assetUrl('css/backend-media-editor.css'));
+            }
+        });
+
+        Event::listen('backend.form.extendFields', function($widget) {
+            $model = $widget->model;
+            if ($model instanceof EntryRecord && $model->blueprint_uuid === 'lzaplata_slider_slides'
+                && !\Backend\Facades\BackendAuth::userHasPermission('humlnetcreative.pages.slider.publish')) {
+                $widget->removeField('is_enabled');
+            }
+        });
+
         Event::listen(["cms.pageLookup.listTypes", "pages.menuitem.listTypes"], function() {
             return [
-                "page" => "lzaplata.pages::lang.menuitem.listtype.page.label",
+                "page" => "humlnetcreative.pages::lang.menuitem.listtype.page.label",
             ];
         });
 
@@ -57,6 +116,8 @@ class Plugin extends PluginBase
             PageComponent::class    => "page",
             Breadcrumbs::class      => "breadcrumbs",
             Homepage::class         => "homepage",
+            BuilderPageComponent::class => "builderPage",
+            BuilderBreadcrumbs::class => "builderBreadcrumbs",
         ];
     }
 
@@ -94,6 +155,8 @@ class Plugin extends PluginBase
             BlockTypeSelector::class    => "blocktypeselector",
             ColorSchemeSelector::class  => "colorschemeselector",
             RangeSelector::class        => "rangeselector",
+            SliderMedia::class          => "slidermedia",
+            SliderUsage::class          => "sliderusage",
         ];
     }
 
@@ -109,12 +172,33 @@ class Plugin extends PluginBase
         foreach (Page::all() as $page) {
             $permissionName = str_replace("/", ".", $page->fullslug);
 
-            $permissions["lzaplata.pages.structure." . $permissionName] = [
+            $permissions["humlnetcreative.pages.structure." . $permissionName] = [
                 "label" => $page->title,
-                "tab"   => 'lzaplata.pages::lang.plugin.name',
+                "tab"   => 'humlnetcreative.pages::lang.plugin.name',
                 "order" => $page->sort_order,
             ];
         }
+
+        foreach (SectionRegistry::instance()->all() as $type => $definition) {
+            $permissions[$definition['permission']] = [
+                'label' => 'Sekce: '.$definition['label'],
+                'tab' => 'humlnetcreative.pages::lang.plugin.name',
+            ];
+        }
+
+        $permissions['humlnetcreative.pages.builder'] = ['label' => 'Nový Page Builder', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.builder.import'] = ['label' => 'Import kostry webu', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.builder.trash'] = ['label' => 'Obnova obsahu z koše', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.editor.html'] = ['label' => 'Rich editor: HTML zdroj a tabulky', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.schemes.manage'] = ['label' => 'Vývojář: definice barevných schémat theme', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.slider.manage'] = ['label' => 'Prezentace: správa Sliderů a položek', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.slider.select'] = ['label' => 'Prezentace: výběr Slideru v Builderu', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.slider.publish'] = ['label' => 'Prezentace: publikování položek', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.slider.media.image'] = ['label' => 'Prezentace: nahrávání obrázků', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.slider.media.video'] = ['label' => 'Prezentace: nahrávání videí', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.slider.media.crop'] = ['label' => 'Prezentace: ořez a pozice médií', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.slider.media.delete'] = ['label' => 'Prezentace: odstraňování médií', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.slider.force_delete'] = ['label' => 'Prezentace: vynucené odstranění Slideru', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
 
         return $permissions;
     }

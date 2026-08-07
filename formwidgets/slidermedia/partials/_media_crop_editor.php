@@ -1,0 +1,21 @@
+<?php
+    $crop = $mediaUse->crop ?: ['x' => 0, 'y' => 0, 'width' => $mediaUse->asset->width, 'height' => $mediaUse->asset->height];
+    [$ratioWidth, $ratioHeight] = array_map('floatval', explode(':', $slotDefinition['ratio']));
+?>
+<div class="hucr-media-crop" data-popup-size="adaptive" data-hucr-media-crop
+    data-media-use-id="<?= (int) $mediaUse->id ?>" data-context-id="<?= (int) $mediaUse->owner_id ?>"
+    data-apply-handler="<?= e($applyHandler) ?>"
+    data-image-width="<?= (int) $mediaUse->asset->width ?>" data-image-height="<?= (int) $mediaUse->asset->height ?>"
+    data-aspect-ratio="<?= e($ratioWidth / max(1, $ratioHeight)) ?>"
+    data-min-width="<?= (int) $slotDefinition['minimum'][0] ?>" data-min-height="<?= (int) $slotDefinition['minimum'][1] ?>"
+    data-crop-x="<?= (int) ($crop['x'] ?? 0) ?>" data-crop-y="<?= (int) ($crop['y'] ?? 0) ?>"
+    data-crop-width="<?= (int) ($crop['width'] ?? $mediaUse->asset->width) ?>" data-crop-height="<?= (int) ($crop['height'] ?? $mediaUse->asset->height) ?>">
+    <div class="modal-header"><h4 class="modal-title">Upravit ořez — <?= e($mediaUse->asset->original_name) ?></h4><button type="button" class="btn-close" data-dismiss="popup"></button></div>
+    <div class="modal-body hucr-media-crop__body">
+        <div class="hucr-media-crop__canvas" data-hucr-crop-canvas><img src="<?= e($previewUrl) ?>" alt="" data-hucr-crop-image><p class="hucr-media-crop__error" data-hucr-crop-error hidden>Originální obrázek se nepodařilo načíst.</p></div>
+        <aside class="hucr-media-crop__details"><h5>Parametry výřezu</h5><p><?= (int) $mediaUse->asset->width ?> × <?= (int) $mediaUse->asset->height ?> px · poměr <?= e($slotDefinition['ratio']) ?></p>
+            <div class="hucr-media-crop__coordinates"><label>X <input class="form-control" readonly data-hucr-crop-x></label><label>Y <input class="form-control" readonly data-hucr-crop-y></label><label>Šířka <input class="form-control" readonly data-hucr-crop-width></label><label>Výška <input class="form-control" readonly data-hucr-crop-height></label></div>
+        </aside>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-primary" data-hucr-apply-crop>Uložit ořez</button><button type="button" class="btn btn-secondary" data-dismiss="popup">Zrušit</button></div>
+</div>

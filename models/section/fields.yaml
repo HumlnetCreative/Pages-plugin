@@ -1,0 +1,189 @@
+tabs:
+    fields:
+        title:
+            tab: Základní
+            label: Interní název sekce
+            type: text
+            span: left
+            comment: Používá se pro přehled v builderu, ne jako viditelný nadpis.
+        type:
+            tab: Základní
+            label: Typ sekce
+            type: dropdown
+            optionsMethod: getTypeOptions
+            span: right
+            required: true
+        is_published:
+            tab: Základní
+            label: Zobrazit na webu
+            type: switch
+            default: true
+            span: left
+        layout[width]:
+            tab: Rozvržení
+            label: Šířka
+            type: dropdown
+            default: contained
+            options:
+                contained: Obsah v kontejneru
+                wide: Široký obsah
+                full: Přes celou šířku
+        layout[spacing]:
+            tab: Rozvržení
+            label: Vertikální rytmus
+            type: dropdown
+            default: standard
+            options:
+                none: Bez mezery
+                small: Malá
+                standard: Standardní
+                large: Velká
+        style[color_scheme]:
+            tab: Vzhled
+            label: Barevné schéma
+            type: colorschemeselector
+            comment: Nevyplněno = zdědit výchozí schéma stránky/theme. U CTA určuje vnější pozadí sekce.
+        style[container_color_scheme]:
+            tab: Vzhled
+            label: Schéma vnitřního bloku
+            type: colorschemeselector
+            comment: Nevyplněno = zdědit ze sekce. Používá se pouze u CTA.
+        style[heading_color_scheme]:
+            tab: Vzhled
+            label: Schéma nadpisu
+            type: colorschemeselector
+            comment: Nevyplněno = zdědit ze sekce.
+        style[text_color_scheme]:
+            tab: Vzhled
+            label: Schéma textu
+            type: colorschemeselector
+            comment: Nevyplněno = zdědit ze sekce.
+        style[cta_color_scheme]:
+            tab: Vzhled
+            label: Schéma CTA
+            type: colorschemeselector
+            comment: Nevyplněno = zdědit ze sekce.
+        content[heading]:
+            tab: Obsah
+            label: Nadpis
+            type: text
+            span: full
+        content[text]:
+            tab: Obsah
+            label: Text
+            type: richeditor
+            size: large
+            span: full
+        content[position]:
+            tab: Hero
+            label: Pozice obsahu
+            type: dropdown
+            default: left-center
+            options:
+                left-top: Vlevo nahoře
+                left-center: Vlevo uprostřed
+                left-bottom: Vlevo dole
+                center-top: Uprostřed nahoře
+                center-center: Uprostřed
+                center-bottom: Uprostřed dole
+                right-top: Vpravo nahoře
+                right-center: Vpravo uprostřed
+                right-bottom: Vpravo dole
+        content[image_position]:
+            tab: Rozvržení
+            label: Pozice obrázku
+            type: dropdown
+            default: left
+            options:
+                left: Vlevo
+                right: Vpravo
+        layout[image_text_gap]:
+            tab: Rozvržení
+            label: Mezera mezi obrázkem a textem
+            type: dropdown
+            default: standard
+            options:
+                small: Malá (24 px)
+                standard: Standardní (48 px)
+                large: Velká (80 px)
+        content[autoplay]:
+            tab: Prezentace
+            label: Automaticky přehrávat při více slidech
+            type: switch
+            default: true
+            comment: Návštěvník může přehrávání kdykoli pozastavit.
+        slider:
+            tab: Prezentace
+            label: Slider
+            type: relation
+            nameFrom: title
+            emptyOption: Vyberte Slider
+            comment: Obsah Slideru je centrální; vzhled a chování níže platí jen pro tuto Prezentaci.
+            permissions: humlnetcreative.pages.slider.select
+        _slider_actions:
+            tab: Prezentace
+            type: partial
+            path: $/humlnetcreative/pages/models/section/_slider_actions.htm
+        content[autoplay_delay]:
+            tab: Prezentace
+            label: Interval automatického přehrávání
+            type: number
+            default: 5000
+            min: 1000
+            step: 500
+            comment: Hodnota v milisekundách.
+            span: left
+        content[navigation]:
+            tab: Prezentace
+            label: Zobrazit šipky
+            type: switch
+            default: true
+            span: right
+        content[pagination]:
+            tab: Prezentace
+            label: Zobrazit stránkování
+            type: switch
+            default: true
+            span: left
+        content[overlay]:
+            tab: Prezentace
+            label: Překryv pod textem
+            type: switch
+            default: true
+            span: right
+        content[cta_label]:
+            tab: CTA
+            label: Text CTA
+            type: text
+            span: left
+        content[cta_url]:
+            tab: CTA
+            label: Cíl CTA
+            type: text
+            span: right
+            comment: 'URL, kotva, mailto:, tel: nebo interní cesta.'
+        content[columns]:
+            tab: Karty
+            label: Karet na desktopu
+            type: dropdown
+            default: 3
+            options:
+                1: '1'
+                2: '2'
+                3: '3'
+                4: '4'
+        content[embed]:
+            tab: Vložený obsah
+            label: Vložený HTML kód
+            type: codeeditor
+            language: html
+            size: huge
+            comment: Používejte pouze ověřený kód, například iframe z YouTube.
+        media:
+            tab: Média
+            type: partial
+            path: $/humlnetcreative/pages/models/section/_media.htm
+        items:
+            tab: Položky
+            type: partial
+            path: $/humlnetcreative/pages/models/section/_items.htm

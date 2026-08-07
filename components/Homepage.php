@@ -1,7 +1,7 @@
-<?php namespace LZaplata\Pages\Components;
+<?php namespace HumlnetCreative\Pages\Components;
 
 use Cms\Classes\ComponentBase;
-use LZaplata\Pages\Models\Block;
+use HumlnetCreative\Pages\Models\Block;
 
 /**
  * Page Component
@@ -18,8 +18,8 @@ class Homepage extends ComponentBase
     public function componentDetails()
     {
         return [
-            "name" => "lzaplata.pages::lang.component.homepage.name",
-            "description" => "lzaplata.pages::lang.component.homepage.description",
+            "name" => "humlnetcreative.pages::lang.component.homepage.name",
+            "description" => "humlnetcreative.pages::lang.component.homepage.description",
         ];
     }
 

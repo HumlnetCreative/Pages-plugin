@@ -1,4 +1,4 @@
-<?php namespace Lzaplata\Pages\FormWidgets;
+<?php namespace HumlnetCreative\Pages\FormWidgets;
 
 use Backend\Classes\FormWidgetBase;
 use Cms\Classes\Theme;

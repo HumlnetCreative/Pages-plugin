@@ -1,4 +1,4 @@
-<?php namespace LZaplata\Pages\Updates;
+<?php namespace HumlnetCreative\Pages\Updates;
 
 use Schema;
 use October\Rain\Database\Updates\Migration;

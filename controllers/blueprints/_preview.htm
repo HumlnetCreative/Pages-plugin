@@ -1,0 +1,10 @@
+<pre><?= e(json_encode($preview, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></pre>
+<p><strong>Manifest je validní:</strong> <?= count($preview['pages']) ?> kořenových stránek, <?= count($preview['sites'] ?? [null]) ?> webů, <?= count($preview['sliders'] ?? []) ?> Sliderů.</p>
+<button
+    type="button"
+    class="btn btn-primary"
+    data-request="onImport"
+    data-request-data="blueprint_token: '<?= e($blueprintToken) ?>'"
+    data-request-confirm="Vytvořit novou kostru webu? Import nelze použít k aktualizaci existujícího obsahu.">
+    Importovat tuto kostru
+</button>

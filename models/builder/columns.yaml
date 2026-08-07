@@ -1,0 +1,12 @@
+columns:
+    title:
+        label: Stránka
+        searchable: true
+    fullslug:
+        label: Cesta
+    is_published:
+        label: Viditelná
+        type: switch
+    updated_at:
+        label: Upraveno
+        type: datetime

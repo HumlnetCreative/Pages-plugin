@@ -1,4 +1,4 @@
-<?php namespace LZaplata\Pages\Controllers;
+<?php namespace HumlnetCreative\Pages\Controllers;
 
 use Backend\Behaviors\FormController;
 use Backend\Behaviors\ListController;
@@ -9,7 +9,7 @@ use Backend\Classes\Controller;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\View;
 use Illuminate\Http\Response as HttpResponse;
-use LZaplata\Pages\Models\Page;
+use HumlnetCreative\Pages\Models\Page;
 
 class Pages extends Controller
 {
@@ -24,13 +24,13 @@ class Pages extends Controller
     public $relationConfig = 'config_relation.yaml';
 
     public $requiredPermissions = [
-        "lzaplata.pages.page",
+        "humlnetcreative.pages.page",
     ];
 
     public function __construct()
     {
         parent::__construct();
-        BackendMenu::setContext('LZaplata.Pages', 'main-menu-item', 'side-menu-item');
+        BackendMenu::setContext('HumlnetCreative.Pages', 'main-menu-item', 'side-menu-item');
     }
 
     /**
@@ -49,11 +49,11 @@ class Pages extends Controller
 
         $buttons = [];
 
-        if (BackendAuth::userHasPermission("lzaplata.pages.content.create")) {
+        if (BackendAuth::userHasPermission("humlnetcreative.pages.content.create")) {
             $buttons[] = "create";
         }
 
-        if (BackendAuth::userHasPermission("lzaplata.pages.content.delete")) {
+        if (BackendAuth::userHasPermission("humlnetcreative.pages.content.delete")) {
             $buttons[] = "delete";
         }
 
@@ -71,7 +71,7 @@ class Pages extends Controller
         if ($page) {
             $permissionName = str_replace("/", ".", $page->fullslug);
 
-            if (BackendAuth::userHasAccess("lzaplata.pages.structure") && !BackendAuth::userHasAccess("lzaplata.pages.structure.$permissionName")) {
+            if (BackendAuth::userHasAccess("humlnetcreative.pages.structure") && !BackendAuth::userHasAccess("humlnetcreative.pages.structure.$permissionName")) {
                 $content = View::make("backend::access_denied")->render();
 
                 return Response::make($content, 403);

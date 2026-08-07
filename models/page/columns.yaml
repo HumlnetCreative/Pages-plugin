@@ -1,10 +1,10 @@
 columns:
     title:
-        label: 'lzaplata.pages::lang.page.column.title.label'
+        label: 'humlnetcreative.pages::lang.page.column.title.label'
         type: text
         searchable: true
         sortable: false
     sort_order:
-        label: 'lzaplata.pages::lang.page.column.sort_order.label'
+        label: 'humlnetcreative.pages::lang.page.column.sort_order.label'
         type: text
-        permissions: lzaplata.pages.page.reorder
+        permissions: humlnetcreative.pages.page.reorder

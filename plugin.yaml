@@ -1,123 +1,135 @@
 plugin:
-    name: 'lzaplata.pages::lang.plugin.name'
-    description: 'lzaplata.pages::lang.plugin.description'
+    name: 'humlnetcreative.pages::lang.plugin.name'
+    description: 'humlnetcreative.pages::lang.plugin.description'
     author: 'Lukáš Záplata'
     icon: oc-icon-desktop
     homepage: ''
 navigation:
     main-menu-item:
-        label: 'lzaplata.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.plugin.name'
         url: /
         icon: icon-desktop
         permissions:
-            - lzaplata.pages.default
+            - humlnetcreative.pages.default
         sideMenu:
             side-menu-item2:
-                label: 'lzaplata.pages::lang.menuitem.submenu.homepage.label'
-                url: lzaplata/pages/blocks
+                label: 'humlnetcreative.pages::lang.menuitem.submenu.homepage.label'
+                url: humlnetcreative/pages/blocks
                 icon: icon-home
                 permissions:
-                    - lzaplata.pages.block
+                    - humlnetcreative.pages.block
             side-menu-item:
-                label: 'lzaplata.pages::lang.menuitem.submenu.structure.label'
-                url: lzaplata/pages/pages
+                label: 'humlnetcreative.pages::lang.menuitem.submenu.structure.label'
+                url: humlnetcreative/pages/pages
                 icon: icon-sitemap
                 permissions:
-                    - lzaplata.pages.default
+                    - humlnetcreative.pages.default
+            side-menu-builder:
+                label: 'Page Builder'
+                url: humlnetcreative/pages/builderpages
+                icon: icon-th-large
+                permissions:
+                    - humlnetcreative.pages.builder
+            side-menu-blueprint:
+                label: 'Import kostry'
+                url: humlnetcreative/pages/blueprints
+                icon: icon-upload
+                permissions:
+                    - humlnetcreative.pages.builder.import
 permissions:
-    lzaplata.pages.default:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.default'
-    lzaplata.pages.content:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.label'
-    lzaplata.pages.content.create:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.create.label'
-    lzaplata.pages.content.update:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.label'
-    lzaplata.pages.content.delete:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.delete.label'
-    lzaplata.pages.content.update.type:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.type.label'
-    lzaplata.pages.content.update.posts_category:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.posts_category.label'
-    lzaplata.pages.content.update.files_category:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.files_category.label'
-    lzaplata.pages.content.update.flashmessages_category:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.flashmessages_category.label'
-    lzaplata.pages.content.update.contacts_category:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.contacts_category.label'
-    lzaplata.pages.content.update.jobs_category:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.jobs_category.label'
-    lzaplata.pages.content.update.links_category:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.links_category.label'
-    lzaplata.pages.content.update.partial:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.partial.label'
-    lzaplata.pages.content.update.row_cols:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.row_cols.label'
-    lzaplata.pages.content.update.posts_sort_order:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.posts_sort_order.label'
-    lzaplata.pages.content.update.gallery:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.gallery.label'
-    lzaplata.pages.content.update.pricelist:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.pricelist.label'
-    lzaplata.pages.content.update.opening_hours:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.opening_hours.label'
-    lzaplata.pages.content.update.slider:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.update.slider.label'
-    lzaplata.pages.content.reorder:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.content.reorder.label'
-    lzaplata.pages.page:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.page.label'
-    lzaplata.pages.page.create:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.page.create.label'
-    lzaplata.pages.page.update:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.page.update.label'
-    lzaplata.pages.page.delete:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.page.delete.label'
-    lzaplata.pages.page.reorder:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.page.reorder.label'
-    lzaplata.pages.page.slider:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.page.slider.label'
-    lzaplata.pages.block:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.block.label'
-    lzaplata.pages.block.create:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.block.create.label'
-    lzaplata.pages.block.update:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.block.update.label'
-    lzaplata.pages.block.delete:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.block.delete.label'
-    lzaplata.pages.block.reorder:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.block.reorder.label'
-    lzaplata.pages.structure:
-        tab: 'lzaplata.pages::lang.plugin.name'
-        label: 'lzaplata.pages::lang.permission.structure.label'
+    humlnetcreative.pages.default:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.default'
+    humlnetcreative.pages.content:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.label'
+    humlnetcreative.pages.content.create:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.create.label'
+    humlnetcreative.pages.content.update:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.label'
+    humlnetcreative.pages.content.delete:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.delete.label'
+    humlnetcreative.pages.content.update.type:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.type.label'
+    humlnetcreative.pages.content.update.posts_category:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.posts_category.label'
+    humlnetcreative.pages.content.update.files_category:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.files_category.label'
+    humlnetcreative.pages.content.update.flashmessages_category:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.flashmessages_category.label'
+    humlnetcreative.pages.content.update.contacts_category:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.contacts_category.label'
+    humlnetcreative.pages.content.update.jobs_category:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.jobs_category.label'
+    humlnetcreative.pages.content.update.links_category:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.links_category.label'
+    humlnetcreative.pages.content.update.partial:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.partial.label'
+    humlnetcreative.pages.content.update.row_cols:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.row_cols.label'
+    humlnetcreative.pages.content.update.posts_sort_order:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.posts_sort_order.label'
+    humlnetcreative.pages.content.update.gallery:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.gallery.label'
+    humlnetcreative.pages.content.update.pricelist:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.pricelist.label'
+    humlnetcreative.pages.content.update.opening_hours:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.opening_hours.label'
+    humlnetcreative.pages.content.update.slider:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.update.slider.label'
+    humlnetcreative.pages.content.reorder:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.content.reorder.label'
+    humlnetcreative.pages.page:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.page.label'
+    humlnetcreative.pages.page.create:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.page.create.label'
+    humlnetcreative.pages.page.update:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.page.update.label'
+    humlnetcreative.pages.page.delete:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.page.delete.label'
+    humlnetcreative.pages.page.reorder:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.page.reorder.label'
+    humlnetcreative.pages.page.slider:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.page.slider.label'
+    humlnetcreative.pages.block:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.block.label'
+    humlnetcreative.pages.block.create:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.block.create.label'
+    humlnetcreative.pages.block.update:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.block.update.label'
+    humlnetcreative.pages.block.delete:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.block.delete.label'
+    humlnetcreative.pages.block.reorder:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.block.reorder.label'
+    humlnetcreative.pages.structure:
+        tab: 'humlnetcreative.pages::lang.plugin.name'
+        label: 'humlnetcreative.pages::lang.permission.structure.label'

@@ -1,0 +1,10 @@
+name: Stránka
+modelClass: HumlnetCreative\Pages\Models\BuilderPage
+form: $/humlnetcreative/pages/models/builder/fields.yaml
+defaultRedirect: humlnetcreative/pages/builderpages
+create:
+    redirect: humlnetcreative/pages/builderpages/update/:id
+    redirectClose: humlnetcreative/pages/builderpages
+update:
+    redirect: humlnetcreative/pages/builderpages
+    redirectClose: humlnetcreative/pages/builderpages

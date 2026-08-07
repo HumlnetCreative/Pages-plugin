@@ -1,6 +1,6 @@
 <?php
 
-namespace LZaplata\Pages\Helpers;
+namespace HumlnetCreative\Pages\Helpers;
 
 use Cms\Classes\Partial;
 use Cms\Classes\Theme;

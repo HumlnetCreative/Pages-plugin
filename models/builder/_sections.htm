@@ -1,0 +1,17 @@
+<div class="callout callout-info mb-3">
+    <div class="content">
+        <h4>Přidat sekci</h4>
+        <p>Typy, které zde vidíte, určuje oprávnění vaší backendové role.</p>
+        <div class="btn-group">
+            <?php foreach (\HumlnetCreative\Pages\Services\SectionRegistry::instance()->optionsForBackendUser() as $type => $label): ?>
+                <button type="button" class="btn btn-default"
+                    data-request="onAddSection"
+                    data-request-data="builder_page_id: <?= $model->id ?>, section_type: '<?= $type ?>'"
+                    data-request-success="window.location.reload()">
+                    <?= e($label) ?>
+                </button>
+            <?php endforeach ?>
+        </div>
+    </div>
+</div>
+<?= $this->relationRender('sections') ?>

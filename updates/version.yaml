@@ -155,3 +155,21 @@ v2.5.2:
     - 'Content import model to log updated'
 v2.6.0:
     - 'Allow selecting partial for pricelist content type'
+v2.6.1:
+    - 'Move persisted model and permission references to the HumlnetCreative namespace'
+    - adopt_humlnetcreative_namespace.php
+v3.0.0:
+    - 'New generation page builder, media library and section registry'
+    - create_page_builder_tables.php
+v3.0.1:
+    - 'Create safe default Klient backend role'
+    - seed_client_role.php
+v3.0.2:
+    - 'Add October Multisite root column to builder pages'
+    - add_builder_multisite_root_column.php
+v3.0.3:
+    - 'Add page-level style inheritance to the page builder'
+    - add_builder_page_style_column.php
+v3.1.0:
+    - 'Connect Page Builder presentations to Tailor sliders and add slider media contexts'
+    - add_slider_builder_integration.php

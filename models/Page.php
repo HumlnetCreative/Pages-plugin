@@ -1,4 +1,4 @@
-<?php namespace LZaplata\Pages\Models;
+<?php namespace HumlnetCreative\Pages\Models;
 
 use Backend\Facades\BackendAuth;
 use Cms\Classes\Page as CmsPage;
@@ -257,7 +257,7 @@ class Page extends Model
      */
     public function filterFields($fields, $context = null)
     {
-        if (BackendAuth::userHasPermission("lzaplata.pages.page.reorder")) {
+        if (BackendAuth::userHasPermission("humlnetcreative.pages.page.reorder")) {
             $parent = Page::find($fields->parent->value);
 
             if ($context === "refresh") {
@@ -299,7 +299,7 @@ class Page extends Model
         foreach ($query->get() as $parent) {
             $permissionName = str_replace("/", ".", $parent->fullslug);
 
-            if (BackendAuth::userHasAccess("lzaplata.pages.structure") && !BackendAuth::userHasAccess("lzaplata.pages.structure.$permissionName")) {
+            if (BackendAuth::userHasAccess("humlnetcreative.pages.structure") && !BackendAuth::userHasAccess("humlnetcreative.pages.structure.$permissionName")) {
                 $forbiddenParentIds[] = $parent->id;
             }
         }

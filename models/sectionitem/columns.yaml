@@ -1,0 +1,6 @@
+columns:
+    backend_label:
+        label: Položka
+    is_published:
+        label: Viditelná
+        type: switch

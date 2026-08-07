@@ -1,4 +1,4 @@
-<?php namespace LZaplata\Pages\Models;
+<?php namespace HumlnetCreative\Pages\Models;
 
 use Backend\Facades\BackendAuth;
 use Cms\Classes\Partial;
@@ -81,9 +81,9 @@ class Block extends Model
     {
         $types = [
             "text"          => "Text",
-            "image_text"    => e(trans("lzaplata.pages::lang.block.field.type.option.image_text.label")),
-            "partial"       => e(trans("lzaplata.pages::lang.block.field.type.option.partial.label")),
-            "embed"         => e(trans("lzaplata.pages::lang.block.field.type.option.embed.label")),
+            "image_text"    => e(trans("humlnetcreative.pages::lang.block.field.type.option.image_text.label")),
+            "partial"       => e(trans("humlnetcreative.pages::lang.block.field.type.option.partial.label")),
+            "embed"         => e(trans("humlnetcreative.pages::lang.block.field.type.option.embed.label")),
         ];
 
         if (BlueprintIndexer::instance()->findSectionByHandle("Slider\Slide")) {
@@ -91,21 +91,21 @@ class Block extends Model
         }
 
         if (class_exists(Post::class)) {
-            $types["posts"]         = e(trans("lzaplata.pages::lang.block.field.type.option.posts.label"));
-            $types["posts_slider"]  = e(trans("lzaplata.pages::lang.block.field.type.option.posts_slider.label"));
+            $types["posts"]         = e(trans("humlnetcreative.pages::lang.block.field.type.option.posts.label"));
+            $types["posts_slider"]  = e(trans("humlnetcreative.pages::lang.block.field.type.option.posts_slider.label"));
         }
 
         if (class_exists(Message::class)) {
-            $types["flash_message"] = e(trans("lzaplata.pages::lang.block.field.type.option.flash_message.label"));
+            $types["flash_message"] = e(trans("humlnetcreative.pages::lang.block.field.type.option.flash_message.label"));
         }
 
         if (BlueprintIndexer::instance()->findSectionByHandle("Links\Link")) {
-            $types["links"]         = e(trans("lzaplata.pages::lang.block.field.type.option.links.label"));
-            $types["links_slider"]  = e(trans("lzaplata.pages::lang.block.field.type.option.links_slider.label"));
+            $types["links"]         = e(trans("humlnetcreative.pages::lang.block.field.type.option.links.label"));
+            $types["links_slider"]  = e(trans("humlnetcreative.pages::lang.block.field.type.option.links_slider.label"));
         }
 
         if (class_exists(SmallContactFormSettings::class)) {
-            $types["contact_form"] = e(trans("lzaplata.pages::lang.block.field.type.option.contact_form.label"));
+            $types["contact_form"] = e(trans("humlnetcreative.pages::lang.block.field.type.option.contact_form.label"));
         }
 
         return $types;
@@ -198,7 +198,7 @@ class Block extends Model
      */
     public function filterFields($fields, $context = null)
     {
-        if (BackendAuth::userHasPermission("lzaplata.pages.block.reorder") && isset($fields->sort_order)) {
+        if (BackendAuth::userHasPermission("humlnetcreative.pages.block.reorder") && isset($fields->sort_order)) {
             $latestSibling = Block::orderBy("sort_order", "desc")
                 ->first();
 

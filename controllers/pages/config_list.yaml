@@ -1,7 +1,7 @@
 title: Pages
-modelClass: LZaplata\Pages\Models\Page
-list: $/lzaplata/pages/models/page/columns.yaml
-recordUrl: 'lzaplata/pages/pages/update/:id'
+modelClass: HumlnetCreative\Pages\Models\Page
+list: $/humlnetcreative/pages/models/page/columns.yaml
+recordUrl: 'humlnetcreative/pages/pages/update/:id'
 noRecordsMessage: 'backend::lang.list.no_records'
 recordsPerPage: 20
 showSetup: true

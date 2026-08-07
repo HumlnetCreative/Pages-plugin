@@ -1,16 +1,16 @@
 name: Pages
-modelClass: LZaplata\Pages\Models\Page
-form: $/lzaplata/pages/models/page/fields.yaml
-defaultRedirect: lzaplata/pages/pages
+modelClass: HumlnetCreative\Pages\Models\Page
+form: $/humlnetcreative/pages/models/page/fields.yaml
+defaultRedirect: humlnetcreative/pages/pages
 create:
-    title: 'lzaplata.pages::lang.page.create.title'
-    redirect: 'lzaplata/pages/pages/update/:id'
-    redirectClose: lzaplata/pages/pages
+    title: 'humlnetcreative.pages::lang.page.create.title'
+    redirect: 'humlnetcreative/pages/pages/update/:id'
+    redirectClose: humlnetcreative/pages/pages
 update:
-    title: 'lzaplata.pages::lang.page.update.title'
-    redirect: lzaplata/pages/pages
-    redirectClose: lzaplata/pages/pages
+    title: 'humlnetcreative.pages::lang.page.update.title'
+    redirect: humlnetcreative/pages/pages
+    redirectClose: humlnetcreative/pages/pages
 customMessages:
-    flashCreate: 'lzaplata.pages::lang.page.create.flash'
-    flashUpdate: 'lzaplata.pages::lang.page.update.flash'
-    flashDelete: 'lzaplata.pages::lang.page.delete.flash'
+    flashCreate: 'humlnetcreative.pages::lang.page.create.flash'
+    flashUpdate: 'humlnetcreative.pages::lang.page.update.flash'
+    flashDelete: 'humlnetcreative.pages::lang.page.delete.flash'

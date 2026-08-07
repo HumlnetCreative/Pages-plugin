@@ -1,13 +1,13 @@
 contents:
     label: Content
     view:
-        list: $/lzaplata/pages/models/content/columns.yaml
+        list: $/humlnetcreative/pages/models/content/columns.yaml
         toolbarButtons: create|delete
     manage:
-        form: $/lzaplata/pages/models/content/fields.yaml
-        list: $/lzaplata/pages/models/content/columns.yaml
+        form: $/humlnetcreative/pages/models/content/fields.yaml
+        list: $/humlnetcreative/pages/models/content/columns.yaml
     popupSize: adaptive
     customMessages:
-        buttonCreate: 'lzaplata.pages::lang.content.create.title'
-        titleCreateForm: 'lzaplata.pages::lang.content.create.title'
-        titleUpdateForm: 'lzaplata.pages::lang.content.update.title'
+        buttonCreate: 'humlnetcreative.pages::lang.content.create.title'
+        titleCreateForm: 'humlnetcreative.pages::lang.content.create.title'
+        titleUpdateForm: 'humlnetcreative.pages::lang.content.update.title'

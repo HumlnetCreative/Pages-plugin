@@ -1,4 +1,4 @@
-<?php namespace Lzaplata\Pages\FormWidgets;
+<?php namespace HumlnetCreative\Pages\FormWidgets;
 
 use Backend\Classes\FormWidgetBase;
 use Cms\Classes\Theme;
@@ -36,20 +36,22 @@ class ColorSchemeSelector extends FormWidgetBase
         $themeData = ThemeData::forTheme($theme);
 
         $this->vars["model"] = $this->model;
-        $this->vars["name"] = $this->formField->getName();
+        // Include the form model prefix (for example Section[style][...]).
+        // Without it, values displayed in a relation popup never reached the
+        // RelationController save data and the Update button appeared inert.
+        $this->vars["name"] = $this->getFieldName();
         $this->vars["value"] = $this->getLoadValue();
-        $this->vars["id"] = $this->formField->getId();
+        $this->vars["id"] = $this->getId();
         $this->vars["options"] = $themeData["schemes"] ?? [];
     }
 
     public function loadAssets()
     {
         $this->addCss('css/colorschemeselector.css');
-        $this->addJs('js/colorschemeselector.js');
     }
 
     public function getSaveValue($value)
     {
-        return $value;
+        return $value === '__inherit__' || $value === '' ? null : $value;
     }
 }

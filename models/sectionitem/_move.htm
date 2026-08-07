@@ -1,0 +1,23 @@
+<?php
+$targets = [];
+if ($model->exists && $model->section && $model->section->page) {
+    $targets = \HumlnetCreative\Pages\Models\Section::where('page_id', $model->section->page_id)
+        ->where('type', 'cards')->where('id', '<>', $model->section_id)->orderBy('sort_order')->get();
+}
+?>
+<?php if ($model->exists && $model->section && $model->section->type === 'cards'): ?>
+    <div class="form-group span-full">
+        <label>Přesunout kartu</label>
+        <div class="input-group">
+            <select id="move-card-target-<?= $model->id ?>" class="form-control">
+                <?php foreach ($targets as $target): ?>
+                    <option value="<?= $target->id ?>"><?= e($target->title ?: 'Karty #'.$target->id) ?></option>
+                <?php endforeach ?>
+                <option value="__new">Vytvořit nový blok Karet</option>
+            </select>
+            <button type="button" class="btn btn-default" onclick="$.request('onMoveCard', {data: {item_id: <?= $model->id ?>, target_section_id: document.getElementById('move-card-target-<?= $model->id ?>').value}, success: function(){ $.oc.flashMsg({text: 'Karta byla přesunuta. Zavřete editor a obnovte seznam.', class: 'success'}); }})">
+                Přesunout
+            </button>
+        </div>
+    </div>
+<?php endif ?>

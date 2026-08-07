@@ -1,8 +1,8 @@
 <?php Block::put('breadcrumb') ?>
     <ul>
         <li>
-            <a href="<?= Backend::url('lzaplata/pages/blocks') ?>">
-                <?= e(trans("lzaplata.pages::lang.menuitem.submenu.homepage.label")) ?>
+            <a href="<?= Backend::url('humlnetcreative/pages/blocks') ?>">
+                <?= e(trans("humlnetcreative.pages::lang.menuitem.submenu.homepage.label")) ?>
             </a>
         </li>
         <li>
@@ -48,7 +48,7 @@
                 </button>
 
                 <span class="btn-text">
-                    <?= e(trans('backend::lang.form.or')) ?> <a href="<?= Backend::url('lzaplata/pages/blocks') ?>"><?= e(trans('backend::lang.form.cancel')) ?></a>
+                    <?= e(trans('backend::lang.form.or')) ?> <a href="<?= Backend::url('humlnetcreative/pages/blocks') ?>"><?= e(trans('backend::lang.form.cancel')) ?></a>
                 </span>
             </div>
         </div>
@@ -56,5 +56,5 @@
 
 <?php else: ?>
     <p class="flash-message static error"><?= e(trans($this->fatalError)) ?></p>
-    <p><a href="<?= Backend::url('lzaplata/pages/blocks') ?>" class="btn btn-default"><?= e(trans('backend::lang.form.return_to_list')) ?></a></p>
+    <p><a href="<?= Backend::url('humlnetcreative/pages/blocks') ?>" class="btn btn-default"><?= e(trans('backend::lang.form.return_to_list')) ?></a></p>
 <?php endif ?>

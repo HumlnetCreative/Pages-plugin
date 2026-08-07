@@ -1,5 +1,5 @@
-list: $/lzaplata/pages/models/block/columns.yaml
-modelClass: LZaplata\Pages\Models\Block
+list: $/humlnetcreative/pages/models/block/columns.yaml
+modelClass: HumlnetCreative\Pages\Models\Block
 title: Blocks
 noRecordsMessage: 'backend::lang.list.no_records'
 showSetup: true
@@ -9,7 +9,7 @@ toolbar:
     buttons: list_toolbar
     search:
         prompt: 'backend::lang.list.search_prompt'
-recordUrl: 'lzaplata/pages/blocks/update/:id'
+recordUrl: 'humlnetcreative/pages/blocks/update/:id'
 defaultSort:
     column: sort_order
     direction: asc

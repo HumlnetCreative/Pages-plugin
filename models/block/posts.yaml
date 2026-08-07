@@ -46,7 +46,7 @@ fields:
 
     card:
         type: nestedform
-        form: $/lzaplata/pages/models/block/_post-type.yaml
+        form: $/humlnetcreative/pages/models/block/_post-type.yaml
         trigger:
             action: show
             field: ^options_inherited
@@ -62,7 +62,7 @@ fields:
 
     inline:
         type: nestedform
-        form: $/lzaplata/pages/models/block/_post-type.yaml
+        form: $/humlnetcreative/pages/models/block/_post-type.yaml
         trigger:
             action: show
             field: ^options_inherited

@@ -1,13 +1,13 @@
 <div data-control="toolbar">
-    <?php if (BackendAuth::userHasPermission("lzaplata.pages.block.create")): ?>
+    <?php if (BackendAuth::userHasPermission("humlnetcreative.pages.block.create")): ?>
         <a
-            href="<?= Backend::url('lzaplata/pages/blocks/create') ?>"
+            href="<?= Backend::url('humlnetcreative/pages/blocks/create') ?>"
             class="btn btn-primary oc-icon-plus">
-            <?= e(trans('lzaplata.pages::lang.block.create.title')) ?>
+            <?= e(trans('humlnetcreative.pages::lang.block.create.title')) ?>
         </a>
     <?php endif ?>
 
-    <?php if (BackendAuth::userHasPermission("lzaplata.pages.block.delete")): ?>
+    <?php if (BackendAuth::userHasPermission("humlnetcreative.pages.block.delete")): ?>
         <button
             class="btn btn-default oc-icon-trash-o"
             data-request="onDelete"

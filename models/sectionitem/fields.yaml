@@ -1,0 +1,64 @@
+tabs:
+    fields:
+        is_published:
+            tab: Obsah
+            label: Zobrazit na webu
+            type: switch
+            default: true
+            span: left
+        content[heading]:
+            tab: Obsah
+            label: Nadpis
+            type: text
+            span: right
+        content[icon]:
+            tab: Obsah
+            label: Ikona
+            type: dropdown
+            optionsMethod: getIconOptions
+            emptyOption: Bez ikony
+            span: left
+        content[text]:
+            tab: Obsah
+            label: Text
+            type: richeditor
+            size: large
+            span: full
+        content[cta_label]:
+            tab: CTA
+            label: Text CTA
+            type: text
+            span: left
+        content[cta_url]:
+            tab: CTA
+            label: Cíl CTA
+            type: pagefinder
+            span: right
+        style[color_scheme]:
+            tab: Vzhled
+            label: Barevné schéma
+            type: colorschemeselector
+            comment: Nevyplněno = zdědit ze sekce.
+        style[heading_color_scheme]:
+            tab: Vzhled
+            label: Schéma nadpisu
+            type: colorschemeselector
+            comment: Nevyplněno = zdědit z karty.
+        style[text_color_scheme]:
+            tab: Vzhled
+            label: Schéma textu
+            type: colorschemeselector
+            comment: Nevyplněno = zdědit z karty.
+        style[cta_color_scheme]:
+            tab: Vzhled
+            label: Schéma CTA
+            type: colorschemeselector
+            comment: Nevyplněno = zdědit z karty.
+        move_card:
+            tab: Obsah
+            type: partial
+            path: $/humlnetcreative/pages/models/sectionitem/_move.htm
+        media:
+            tab: Média
+            type: partial
+            path: $/humlnetcreative/pages/models/sectionitem/_media.htm

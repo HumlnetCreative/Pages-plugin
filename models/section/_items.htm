@@ -1,0 +1,6 @@
+<?php if ($model->exists && \HumlnetCreative\Pages\Services\SectionRegistry::instance()->itemsSupported($model->type)): ?>
+    <p class="help-block">Položky upravujte přímo v tomto seznamu. Karty lze řadit a přesunout do jiného bloku Karty stejné stránky.</p>
+    <?= $this->relationRender('items') ?>
+<?php else: ?>
+    <p class="help-block">Tento typ sekce nemá samostatné položky.</p>
+<?php endif ?>

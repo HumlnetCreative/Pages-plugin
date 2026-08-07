@@ -1,16 +1,16 @@
 name: Blocks
-form: $/lzaplata/pages/models/block/fields.yaml
-modelClass: LZaplata\Pages\Models\Block
-defaultRedirect: lzaplata/pages/blocks
+form: $/humlnetcreative/pages/models/block/fields.yaml
+modelClass: HumlnetCreative\Pages\Models\Block
+defaultRedirect: humlnetcreative/pages/blocks
 create:
-    title: 'lzaplata.pages::lang.block.create.title'
-    redirect: 'lzaplata/pages/blocks/update/:id'
-    redirectClose: lzaplata/pages/blocks
+    title: 'humlnetcreative.pages::lang.block.create.title'
+    redirect: 'humlnetcreative/pages/blocks/update/:id'
+    redirectClose: humlnetcreative/pages/blocks
 update:
-    title: 'lzaplata.pages::lang.block.update.title'
-    redirect: lzaplata/pages/blocks
-    redirectClose: lzaplata/pages/blocks
+    title: 'humlnetcreative.pages::lang.block.update.title'
+    redirect: humlnetcreative/pages/blocks
+    redirectClose: humlnetcreative/pages/blocks
 customMessages:
-    flashCreate: 'lzaplata.pages::lang.block.create.flash'
-    flashUpdate: 'lzaplata.pages::lang.block.update.flash'
-    flashDelete: 'lzaplata.pages::lang.block.delete.flash'
+    flashCreate: 'humlnetcreative.pages::lang.block.create.flash'
+    flashUpdate: 'humlnetcreative.pages::lang.block.update.flash'
+    flashDelete: 'humlnetcreative.pages::lang.block.delete.flash'

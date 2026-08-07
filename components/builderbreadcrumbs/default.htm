@@ -1,0 +1,10 @@
+{% set items = __SELF__.breadcrumbs() %}
+{% if items %}
+    <nav aria-label="Drobečková navigace"><ol class="breadcrumb mb-0">
+        {% for item in items %}
+            <li class="breadcrumb-item{{ loop.last ? ' active' }}"{% if loop.last %} aria-current="page"{% endif %}>
+                {% if loop.last %}{{ item.title }}{% else %}<a href="{{ item.url }}">{{ item.title }}</a>{% endif %}
+            </li>
+        {% endfor %}
+    </ol></nav>
+{% endif %}

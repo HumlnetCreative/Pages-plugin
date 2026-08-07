@@ -1,16 +1,16 @@
 columns:
     title:
-        label: 'lzaplata.pages::lang.block.column.title.label'
+        label: 'humlnetcreative.pages::lang.block.column.title.label'
         type: text
         searchable: true
         sortable: false
     type:
-        label: 'lzaplata.pages::lang.block.column.type.label'
+        label: 'humlnetcreative.pages::lang.block.column.type.label'
     sort_order:
-        label: 'lzaplata.pages::lang.block.column.sort_order.label'
+        label: 'humlnetcreative.pages::lang.block.column.sort_order.label'
         type: text
-        permissions: lzaplata.pages.block.reorder
+        permissions: humlnetcreative.pages.block.reorder
     is_published:
-        label: 'lzaplata.pages::lang.block.column.is_published.label'
+        label: 'humlnetcreative.pages::lang.block.column.is_published.label'
         type: switch
         default: true

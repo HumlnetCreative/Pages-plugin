@@ -4,18 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Plugin Overview
 
-`lzaplata/pages` is an October CMS plugin (namespace `LZaplata\Pages`) providing:
+`humlnetcreative/pages` is an October CMS plugin (namespace `HumlnetCreative\Pages`) providing:
 - A hierarchical **page tree** (slug + fullslug) with multisite support
 - A **content block system** for per-page content sections
 - A **homepage block builder** for global blocks independent of the page tree
 - Menu item integration with both `cms.pageLookup` and `pages.menuitem` events
 - Fine-grained **per-permission** controls including per-page structure permissions
 
-This plugin is a standalone Git repository deployed as a subtree/submodule inside the parent skeleton project at `plugins/lzaplata/pages/`.
+This plugin is a standalone Git repository deployed as a subtree/submodule inside the parent skeleton project at `plugins/humlnetcreative/pages/`.
 
 ## Common Commands
 
-Run from the skeleton root (`plugins/lzaplata/pages/../../..`):
+Run from the skeleton root (`plugins/humlnetcreative/pages/../../..`):
 
 ```bash
 php artisan october:migrate        # Apply new migrations (run after adding updates/)
@@ -100,7 +100,7 @@ Three custom form widgets registered in `Plugin.php`:
 
 ### Permission System
 
-Permissions are defined in `plugin.yaml`. The `registerPermissions()` method dynamically adds one permission per `Page` record (`lzaplata.pages.structure.<fullslug-dot-notation>`), enabling per-page access control. These permissions gate which pages appear as selectable parents and which pages are listed in the backend.
+Permissions are defined in `plugin.yaml`. The `registerPermissions()` method dynamically adds one permission per `Page` record (`humlnetcreative.pages.structure.<fullslug-dot-notation>`), enabling per-page access control. These permissions gate which pages appear as selectable parents and which pages are listed in the backend.
 
 ### Menu Integration
 
