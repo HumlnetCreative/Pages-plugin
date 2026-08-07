@@ -23,11 +23,13 @@ class SliderMedia extends FormWidgetBase
         $contexts = collect();
         if ($this->model->exists && $this->model->blueprint_uuid === 'lzaplata_slider_slides') {
             foreach ($this->model->sliders ?: [] as $slider) {
-                $contexts->push(SliderMediaContext::forEntries($slider, $this->model));
+                $contexts->push(
+                    SliderMediaContext::forEntries($slider, $this->model)->load('media.asset')
+                );
             }
         }
 
-        $this->vars['contexts'] = $contexts->load('media.asset');
+        $this->vars['contexts'] = $contexts;
         $this->vars['model'] = $this->model;
         $this->vars['widgetId'] = $this->getId();
         $this->vars['handler'] = fn(string $name) => $this->getEventHandler($name);
