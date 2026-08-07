@@ -49,7 +49,7 @@ class SliderMedia extends FormWidgetBase
         $this->assertPermission('humlnetcreative.pages.slider.media.image');
         $context = $this->contextFromRequest();
         $viewport = request()->input('viewport') === 'mobile' ? 'mobile' : 'desktop';
-        $upload = request()->file('slider_media_file');
+        $upload = $this->uploadedFileFromRequest();
         if (!$upload) {
             throw new \ValidationException(['slider_media_file' => 'Vyberte obrázek.']);
         }
@@ -92,7 +92,7 @@ class SliderMedia extends FormWidgetBase
         $this->assertPermission('humlnetcreative.pages.slider.media.video');
         $context = $this->contextFromRequest();
         $format = request()->input('format') === 'webm' ? 'webm' : 'mp4';
-        $upload = request()->file('slider_media_file');
+        $upload = $this->uploadedFileFromRequest();
         if (!$upload) {
             throw new \ValidationException(['slider_media_file' => 'Vyberte video.']);
         }
@@ -123,7 +123,7 @@ class SliderMedia extends FormWidgetBase
         $this->assertPermission('humlnetcreative.pages.slider.media.image');
         $context = $this->contextFromRequest();
         $viewport = request()->input('viewport') === 'mobile' ? 'mobile' : 'desktop';
-        $upload = request()->file('slider_media_file');
+        $upload = $this->uploadedFileFromRequest();
         if (!$upload) {
             throw new \ValidationException(['slider_media_file' => 'Vyberte obrázek posteru.']);
         }
@@ -275,6 +275,16 @@ class SliderMedia extends FormWidgetBase
     {
         $context = $this->contextFromRequest();
         return $context->media()->with('asset')->findOrFail((int) request()->input('media_use_id'));
+    }
+
+    protected function uploadedFileFromRequest(): ?\Illuminate\Http\UploadedFile
+    {
+        $field = (string) request()->input('upload_field', 'slider_media_file');
+        if (!preg_match('/^slider_media_file(?:_[a-z0-9_]+)?$/', $field)) {
+            throw new \ApplicationException('Neplatné pole nahrávaného souboru.');
+        }
+
+        return request()->file($field);
     }
 
     protected function replaceSlotPrefix(SliderMediaContext $context, string $prefix, MediaUse $newUse): void

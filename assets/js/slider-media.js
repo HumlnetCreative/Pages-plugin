@@ -19,4 +19,20 @@
             position_y: editor.querySelector('[data-position-y]').value
         }}).always(function() { button.disabled = false; });
     });
+
+    $(document).on('click', '[data-hucr-slider-update-metadata]', function() {
+        const button = this;
+        const container = button.closest('.hucr-slider-media__upload');
+        const alt = container?.querySelector('[name="media_alt_text"]');
+        const decorative = container?.querySelector('[name="media_decorative"]');
+        if (!container || !alt || !decorative || button.disabled) return;
+
+        button.disabled = true;
+        $(button).request(button.dataset.handler, { data: {
+            context_id: Number(button.dataset.contextId),
+            media_use_id: Number(button.dataset.mediaUseId),
+            media_alt_text: alt.value.trim(),
+            media_decorative: decorative.checked ? 1 : 0
+        }}).always(function() { button.disabled = false; });
+    });
 })(window.jQuery);
