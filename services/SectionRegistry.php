@@ -33,7 +33,7 @@ class SectionRegistry
                 'section_style_fields' => ['container', 'heading', 'text', 'cta'],
                 'defaults' => ['layout' => ['width' => 'full', 'spacing' => 'none'], 'content' => [
                     'autoplay' => true, 'autoplay_delay' => 5000, 'navigation' => true,
-                    'pagination' => true, 'overlay' => true, 'position' => 'left-center',
+                    'pagination' => true, 'overlay' => true, 'playback_control' => true, 'position' => 'left-center',
                 ]],
             ],
             'text' => [
@@ -60,14 +60,13 @@ class SectionRegistry
                 'section_style_fields' => ['container', 'heading', 'text', 'cta'],
             ],
             'accordion' => [
-                'label' => 'FAQ / akordeon', 'permission' => 'humlnetcreative.pages.section.accordion', 'items' => true,
-                'section_fields' => ['heading', 'items'], 'section_style_fields' => ['heading'],
-                'item_fields' => ['heading', 'text', 'style'], 'item_style_fields' => ['heading', 'text'],
+                'label' => 'FAQ', 'permission' => 'humlnetcreative.pages.section.accordion', 'items' => false,
+                'section_fields' => ['heading', 'faq_group'], 'section_style_fields' => ['heading'],
             ],
             'gallery' => [
-                'label' => 'Galerie', 'permission' => 'humlnetcreative.pages.section.gallery', 'items' => true,
-                'section_fields' => ['heading', 'items'], 'section_style_fields' => ['heading'],
-                'item_fields' => ['media'], 'item_media_slots' => ['gallery_image'],
+                'label' => 'Galerie', 'permission' => 'humlnetcreative.pages.section.gallery', 'items' => false,
+                'section_fields' => ['heading', 'gallery', 'gallery_columns'], 'section_style_fields' => ['heading'],
+                'defaults' => ['content' => ['gallery_columns' => 3]],
             ],
             'files' => ['label' => 'Soubory ke stažení', 'permission' => 'humlnetcreative.pages.section.files', 'items' => false, 'enabled' => false],
             'form' => ['label' => 'Formulář', 'permission' => 'humlnetcreative.pages.section.form', 'items' => false, 'enabled' => false],

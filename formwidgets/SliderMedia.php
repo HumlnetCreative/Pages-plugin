@@ -242,7 +242,7 @@ class SliderMedia extends FormWidgetBase
         $service = new MediaService();
         $this->vars['mediaUse'] = $use;
         $this->vars['slotDefinition'] = $service->slotDefinition($use->slot);
-        $this->vars['previewUrl'] = \Backend::url('humlnetcreative/pages/builderpages/previewmedia/'.$use->id);
+        $this->vars['previewUrl'] = $service->backendMasterUrl($use);
         $this->vars['applyHandler'] = $this->getEventHandler('onApplyMediaCrop');
         return $this->makePartial('media_crop_editor');
     }

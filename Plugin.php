@@ -4,6 +4,7 @@ use HumlnetCreative\Pages\Components\Breadcrumbs;
 use HumlnetCreative\Pages\Components\Homepage;
 use HumlnetCreative\Pages\FormWidgets\BlockTypeSelector;
 use HumlnetCreative\Pages\FormWidgets\ColorSchemeSelector;
+use HumlnetCreative\Pages\FormWidgets\FaqUsage;
 use HumlnetCreative\Pages\FormWidgets\RangeSelector;
 use HumlnetCreative\Pages\FormWidgets\SliderMedia;
 use HumlnetCreative\Pages\FormWidgets\SliderUsage;
@@ -20,6 +21,8 @@ use HumlnetCreative\Pages\Services\SectionRegistry;
 use Tailor\Models\EntryRecord;
 use Tailor\Models\StructureRecord;
 use HumlnetCreative\Pages\Services\SliderRecordLifecycle;
+use HumlnetCreative\Pages\Services\FaqRecordLifecycle;
+use HumlnetCreative\Pages\Services\GalleryRecordLifecycle;
 
 /**
  * Plugin class
@@ -57,8 +60,14 @@ class Plugin extends PluginBase
      */
     public function boot()
     {
-        StructureRecord::extend(fn(StructureRecord $model) => SliderRecordLifecycle::bind($model));
+        StructureRecord::extend(function(StructureRecord $model) {
+            SliderRecordLifecycle::bind($model);
+            FaqRecordLifecycle::bind($model);
+        });
         SliderEntry::extend(fn(SliderEntry $model) => SliderRecordLifecycle::bind($model));
+        if (class_exists(\LZaplata\Gallery\Models\Gallery::class)) {
+            \LZaplata\Gallery\Models\Gallery::extend(fn($model) => GalleryRecordLifecycle::bind($model));
+        }
 
         Event::listen('backend.page.beforeDisplay', function($controller) {
             $isPagesController = str_starts_with($controller::class, 'HumlnetCreative\\Pages\\Controllers\\');
@@ -73,8 +82,10 @@ class Plugin extends PluginBase
             };
             $controller->addJs($assetUrl('js/backend-save-hotkey.js'));
             if ($isPagesController) {
+                $controller->addJs($assetUrl('js/backend-slider-editor.js'));
                 $controller->addJs($assetUrl('js/backend-media-crop.js'));
                 $controller->addJs($assetUrl('js/backend-media-editor.js'));
+                $controller->addCss($assetUrl('css/backend-page-builder.css'));
                 $controller->addCss($assetUrl('css/backend-media-crop.css'));
                 $controller->addCss($assetUrl('css/backend-media-editor.css'));
             }
@@ -86,11 +97,19 @@ class Plugin extends PluginBase
                 && !\Backend\Facades\BackendAuth::userHasPermission('humlnetcreative.pages.slider.publish')) {
                 $widget->removeField('is_enabled');
             }
+
+            if ($model instanceof EntryRecord && $model->blueprint_uuid === 'lzaplata_faq'
+                && ($answer = $widget->getField('answer'))) {
+                $answer->toolbarButtons = \Backend\Facades\BackendAuth::userHasPermission('humlnetcreative.pages.editor.html')
+                    ? 'undo|redo||paragraphFormat|bold|italic|underline||align|formatOL|formatUL|outdent|indent||insertPageLink|insertHR|insertTable||fullscreen|html'
+                    : 'undo|redo||paragraphFormat|bold|italic|underline||align|formatOL|formatUL|outdent|indent||insertPageLink|insertHR||fullscreen';
+            }
         });
 
         Event::listen(["cms.pageLookup.listTypes", "pages.menuitem.listTypes"], function() {
             return [
                 "page" => "humlnetcreative.pages::lang.menuitem.listtype.page.label",
+                "builder-page" => "humlnetcreative.pages::lang.menuitem.listtype.builder_page.label",
             ];
         });
 
@@ -98,11 +117,19 @@ class Plugin extends PluginBase
             if ($type == "page") {
                 return Page::getMenuTypeInfo($type);
             }
+
+            if ($type === "builder-page") {
+                return \HumlnetCreative\Pages\Models\BuilderPage::getMenuTypeInfo($type);
+            }
         });
 
         Event::listen(["cms.pageLookup.resolveItem", "pages.menuitem.resolveItem"], function($type, $item, $url, $theme) {
             if ($type == "page") {
                 return Page::resolveMenuItem($item, $url, $theme);
+            }
+
+            if ($type === "builder-page") {
+                return \HumlnetCreative\Pages\Models\BuilderPage::resolveMenuItem($item, $url, $theme);
             }
         });
     }
@@ -154,6 +181,7 @@ class Plugin extends PluginBase
         return [
             BlockTypeSelector::class    => "blocktypeselector",
             ColorSchemeSelector::class  => "colorschemeselector",
+            FaqUsage::class             => "faqusage",
             RangeSelector::class        => "rangeselector",
             SliderMedia::class          => "slidermedia",
             SliderUsage::class          => "sliderusage",
@@ -199,6 +227,11 @@ class Plugin extends PluginBase
         $permissions['humlnetcreative.pages.slider.media.crop'] = ['label' => 'Prezentace: ořez a pozice médií', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.slider.media.delete'] = ['label' => 'Prezentace: odstraňování médií', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.slider.force_delete'] = ['label' => 'Prezentace: vynucené odstranění Slideru', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.faq.manage'] = ['label' => 'FAQ: správa skupin a otázek', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.faq.select'] = ['label' => 'FAQ: výběr skupiny v Builderu', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.faq.force_delete'] = ['label' => 'FAQ: vynucené odstranění skupiny', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.gallery.manage'] = ['label' => 'Galerie: správa galerií a obrázků', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.gallery.select'] = ['label' => 'Galerie: výběr galerie v Builderu', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
 
         return $permissions;
     }

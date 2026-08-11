@@ -11,12 +11,37 @@
         return Number(editor.dataset[name]);
     }
 
+    function normalizeSelection(editor, selection) {
+        const ratio = numberFrom(editor, 'aspectRatio');
+        const imageWidth = numberFrom(editor, 'imageWidth');
+        const imageHeight = numberFrom(editor, 'imageHeight');
+        let width = Math.max(1, Math.round(selection.w || 0));
+        let height = Math.max(1, Math.round(selection.h || 0));
+
+        // Jcrop keeps the ratio in floating-point coordinates. Normalize the
+        // independently rounded pixel dimensions before displaying/saving.
+        if (width / height > ratio) {
+            width = Math.max(1, Math.round(height * ratio));
+        }
+        else {
+            height = Math.max(1, Math.round(width / ratio));
+        }
+
+        return {
+            x: Math.max(0, Math.min(Math.round(selection.x || 0), imageWidth - width)),
+            y: Math.max(0, Math.min(Math.round(selection.y || 0), imageHeight - height)),
+            w: width,
+            h: height
+        };
+    }
+
     function updateCoordinates(editor, selection) {
+        selection = normalizeSelection(editor, selection);
         const values = {
-            x: Math.round(selection.x || 0),
-            y: Math.round(selection.y || 0),
-            width: Math.round(selection.w || 0),
-            height: Math.round(selection.h || 0)
+            x: selection.x,
+            y: selection.y,
+            width: selection.w,
+            height: selection.h
         };
 
         Object.entries(values).forEach(([key, value]) => {
@@ -102,17 +127,17 @@
                 return;
             }
 
-            const selection = editor.hucrCropper.tellSelect();
+            const selection = normalizeSelection(editor, editor.hucrCropper.tellSelect());
             editor.dataset.hucrCropSaving = 'true';
             applyButton.disabled = true;
             $(applyButton).request(editor.dataset.applyHandler || 'onApplyMediaCrop', {
                 data: {
                     media_use_id: numberFrom(editor, 'mediaUseId'),
                     context_id: numberFrom(editor, 'contextId'),
-                    crop_x: Math.round(selection.x),
-                    crop_y: Math.round(selection.y),
-                    crop_width: Math.round(selection.w),
-                    crop_height: Math.round(selection.h)
+                    crop_x: selection.x,
+                    crop_y: selection.y,
+                    crop_width: selection.w,
+                    crop_height: selection.h
                 }
             })
                 .done(function() {

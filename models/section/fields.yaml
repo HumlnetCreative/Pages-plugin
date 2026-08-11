@@ -74,6 +74,10 @@ tabs:
             type: richeditor
             size: large
             span: full
+        _carousel_appearance:
+            tab: Prezentace
+            label: Text a pozadí
+            type: section
         content[position]:
             tab: Hero
             label: Pozice obsahu
@@ -89,6 +93,12 @@ tabs:
                 right-top: Vpravo nahoře
                 right-center: Vpravo uprostřed
                 right-bottom: Vpravo dole
+        content[overlay]:
+            tab: Prezentace
+            label: Ztmavit obrázek pod textem
+            type: switch
+            default: true
+            comment: Pro lepší čitelnost textu ztmaví příslušnou část obrázku. U položek bez textu se nepoužije.
         content[image_position]:
             tab: Rozvržení
             label: Pozice obrázku
@@ -106,24 +116,17 @@ tabs:
                 small: Malá (24 px)
                 standard: Standardní (48 px)
                 large: Velká (80 px)
+        _carousel_playback:
+            tab: Prezentace
+            label: Přehrávání
+            type: section
         content[autoplay]:
             tab: Prezentace
             label: Automaticky přehrávat při více slidech
             type: switch
             default: true
-            comment: Návštěvník může přehrávání kdykoli pozastavit.
-        slider:
-            tab: Prezentace
-            label: Slider
-            type: relation
-            nameFrom: title
-            emptyOption: Vyberte Slider
-            comment: Obsah Slideru je centrální; vzhled a chování níže platí jen pro tuto Prezentaci.
-            permissions: humlnetcreative.pages.slider.select
-        _slider_actions:
-            tab: Prezentace
-            type: partial
-            path: $/humlnetcreative/pages/models/section/_slider_actions.htm
+            span: left
+            comment: Při zapnutí se prezentace s více položkami automaticky posouvá.
         content[autoplay_delay]:
             tab: Prezentace
             label: Interval automatického přehrávání
@@ -132,6 +135,23 @@ tabs:
             min: 1000
             step: 500
             comment: Hodnota v milisekundách.
+            span: right
+            trigger:
+                action: show
+                field: content[autoplay]
+                condition: checked
+        content[playback_control]:
+            tab: Prezentace
+            label: Zobrazit ovládání přehrávání
+            type: switch
+            default: true
+            span: full
+            comment: Vypnutí skryje tlačítko pauzy/spuštění. U automaticky přehrávaného obsahu tím může dojít ke zhoršení přístupnosti.
+        content[pagination]:
+            tab: Prezentace
+            label: Zobrazit stránkování
+            type: switch
+            default: true
             span: left
         content[navigation]:
             tab: Prezentace
@@ -139,18 +159,67 @@ tabs:
             type: switch
             default: true
             span: right
-        content[pagination]:
+        _carousel_slider:
             tab: Prezentace
-            label: Zobrazit stránkování
-            type: switch
-            default: true
-            span: left
-        content[overlay]:
+            label: Výběr Slideru
+            type: section
+        slider:
             tab: Prezentace
-            label: Překryv pod textem
-            type: switch
-            default: true
-            span: right
+            label: Slider
+            type: relation
+            nameFrom: title
+            emptyOption: Vyberte Slider
+            comment: Obsah Slideru je centrální; vzhled a chování výše platí jen pro tuto Prezentaci.
+            permissions: humlnetcreative.pages.slider.select
+        _slider_actions:
+            tab: Prezentace
+            type: partial
+            path: $/humlnetcreative/pages/models/section/_slider_actions.htm
+        _faq_group:
+            tab: FAQ
+            label: Výběr FAQ skupiny
+            type: section
+        faq_group:
+            tab: FAQ
+            label: FAQ skupina
+            type: relation
+            nameFrom: title
+            emptyOption: Vyberte FAQ skupinu
+            comment: Otázky a odpovědi jsou centrální a mohou být použity na více stránkách.
+            permissions: humlnetcreative.pages.faq.select
+        _faq_actions:
+            tab: FAQ
+            type: partial
+            path: $/humlnetcreative/pages/models/section/_faq_actions.htm
+        _gallery_source:
+            tab: Galerie
+            label: Výběr galerie
+            type: section
+        gallery:
+            tab: Galerie
+            label: Galerie
+            type: relation
+            nameFrom: name
+            emptyOption: Vyberte galerii
+            comment: Obrázky jsou centrální a stejnou galerii lze použít na více stránkách.
+            permissions: humlnetcreative.pages.gallery.select
+        content[gallery_columns]:
+            tab: Galerie
+            label: Obrázků na řádku na desktopu
+            type: dropdown
+            default: 3
+            options:
+                1: '1'
+                2: '2'
+                3: '3'
+                4: '4'
+                5: '5'
+                6: '6'
+            comment: Na tabletu a mobilu se počet sloupců automaticky přizpůsobí šířce obrazovky.
+        _gallery_actions:
+            tab: Galerie
+            type: partial
+            path: $/humlnetcreative/pages/models/section/_gallery_actions.htm
         content[cta_label]:
             tab: CTA
             label: Text CTA

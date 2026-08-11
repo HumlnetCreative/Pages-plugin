@@ -72,7 +72,7 @@
                             <?php if ($use): ?>
                                 <img src="<?= e($mediaService->backendPreviewUrl($use)) ?>" alt="">
                                 <label>Alternativní text <input class="form-control" type="text" name="media_alt_text" value="<?= e($use->alt_text ?: '') ?>" placeholder="Prázdný text = dekorativní obrázek"></label>
-                                <label><input type="checkbox" name="media_decorative" value="1" <?= $use->is_decorative ? 'checked' : '' ?>> Dekorativní obrázek</label>
+                                <label class="hucr-slider-media__decorative"><input type="checkbox" name="media_decorative" value="1" <?= $use->is_decorative ? 'checked' : '' ?>> <span>Dekorativní obrázek</span></label>
                                 <div><button type="button" class="btn btn-default btn-sm oc-icon-crop" data-control="popup" data-handler="<?= e($handler('onLoadMediaCropEditor')) ?>" data-request-data="context_id: <?= $context->id ?>, media_use_id: <?= $use->id ?>" data-size="huge">Upravit ořez</button>
                                 <button type="button" class="btn btn-primary btn-sm" data-hucr-slider-update-metadata data-handler="<?= e($handler('onUpdateImageMetadata')) ?>" data-context-id="<?= $context->id ?>" data-media-use-id="<?= $use->id ?>">Uložit popis</button>
                                 <button type="button" class="btn btn-danger btn-sm" data-request="<?= e($handler('onDeleteMedia')) ?>" data-request-data="context_id: <?= $context->id ?>, media_use_id: <?= $use->id ?>" data-request-confirm="Odstranit obrázek?">Odstranit</button></div>

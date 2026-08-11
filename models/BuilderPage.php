@@ -6,8 +6,10 @@ use October\Rain\Database\Traits\Multisite;
 use October\Rain\Database\Traits\SimpleTree;
 use October\Rain\Database\Traits\Sortable;
 use Illuminate\Support\Str;
+use Cms\Classes\Page as CmsPage;
 use Cms\Classes\Theme;
 use Cms\Classes\Router as CmsRouter;
+use Url;
 
 class BuilderPage extends Model
 {
@@ -58,6 +60,100 @@ class BuilderPage extends Model
     public $hasMany = [
         'sections' => [Section::class, 'key' => 'page_id', 'order' => 'sort_order'],
     ];
+
+    /** Supplies Builder pages and compatible CMS templates to Page Finder. */
+    public static function getMenuTypeInfo(string $type): array
+    {
+        if ($type !== 'builder-page') {
+            return [];
+        }
+
+        $theme = Theme::getEditTheme() ?: Theme::getActiveTheme();
+        $cmsPages = [];
+
+        if ($theme) {
+            foreach (CmsPage::listInTheme($theme, true) as $cmsPage) {
+                if (!$cmsPage->hasComponent('builderPage')) {
+                    continue;
+                }
+
+                $properties = $cmsPage->getComponentProperties('builderPage');
+                if (!preg_match('/^\s*\{\{\s*:[a-zA-Z0-9_]+\s*\}\}\s*$/', (string) ($properties['value'] ?? ''))) {
+                    continue;
+                }
+
+                $cmsPages[] = $cmsPage;
+            }
+        }
+
+        return [
+            'nesting' => false,
+            'dynamicItems' => false,
+            'references' => static::listPageFinderOptions(),
+            'cmsPages' => $cmsPages,
+        ];
+    }
+
+    /** Resolves a Page Finder selection to the selected Builder page URL. */
+    public static function resolveMenuItem($item, string $url, Theme $theme): ?array
+    {
+        if ($item->type !== 'builder-page' || !$item->reference || !$item->cmsPage) {
+            return null;
+        }
+
+        $page = static::find($item->reference);
+        if (!$page || !$page->is_published) {
+            return null;
+        }
+
+        $pageUrl = static::getPageFinderUrl((string) $item->cmsPage, $page, $theme);
+        if (!$pageUrl) {
+            return null;
+        }
+
+        $pageUrl = Url::to($pageUrl);
+
+        return [
+            'url' => $pageUrl,
+            'isActive' => mb_strtolower($pageUrl) === mb_strtolower($url),
+            'mtime' => $page->updated_at,
+        ];
+    }
+
+    protected static function listPageFinderOptions(): array
+    {
+        $pages = static::where('is_published', true)->orderBy('sort_order')->getNested();
+
+        $iterator = function($nodes) use (&$iterator): array {
+            $result = [];
+
+            foreach ($nodes as $page) {
+                $children = $iterator($page->children);
+                $result[$page->getKey()] = $children
+                    ? ['title' => $page->title, 'items' => $children]
+                    : $page->title;
+            }
+
+            return $result;
+        };
+
+        return $iterator($pages);
+    }
+
+    protected static function getPageFinderUrl(string $pageCode, self $page, Theme $theme): ?string
+    {
+        $cmsPage = CmsPage::loadCached($theme, $pageCode);
+        if (!$cmsPage || !$cmsPage->hasComponent('builderPage')) {
+            return null;
+        }
+
+        $properties = $cmsPage->getComponentProperties('builderPage');
+        if (!preg_match('/^\s*\{\{\s*:([a-zA-Z0-9_]+)\s*\}\}\s*$/', (string) ($properties['value'] ?? ''), $matches)) {
+            return null;
+        }
+
+        return CmsPage::url($cmsPage->getBaseFileName(), [$matches[1] => $page->fullslug]);
+    }
 
     protected function buildFullslug(): string
     {

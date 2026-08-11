@@ -22,6 +22,8 @@ class Section extends Model
     public $belongsTo = [
         'page' => [BuilderPage::class, 'key' => 'page_id'],
         'slider' => [SliderEntry::class, 'key' => 'slider_id'],
+        'faq_group' => [FaqGroupEntry::class, 'key' => 'faq_group_id'],
+        'gallery' => [\LZaplata\Gallery\Models\Gallery::class, 'key' => 'gallery_id'],
     ];
     public $hasMany = ['items' => [SectionItem::class, 'key' => 'section_id', 'order' => 'sort_order']];
     public $morphMany = ['media' => [MediaUse::class, 'name' => 'owner', 'order' => 'slot']];
@@ -55,6 +57,35 @@ class Section extends Model
     public function getPresentationAttribute(): array
     {
         return (new PresentationService())->build($this);
+    }
+
+    /** Published questions from the reusable Tailor FAQ group in editorial order. */
+    public function getFaqItemsAttribute()
+    {
+        if (!$this->faq_group || !$this->faq_group->is_enabled) {
+            return collect();
+        }
+
+        return collect($this->faq_group?->questions ?: [])
+            ->filter(fn($question) => (bool) $question->is_enabled)
+            ->sortBy('sort_order')
+            ->values();
+    }
+
+    /** Whether the first section can render the page's single primary heading itself. */
+    public function getProvidesPageHeadingAttribute(): bool
+    {
+        if ($this->type === 'hero') {
+            return true;
+        }
+        if ($this->type === 'text') {
+            return trim((string) data_get($this->content, 'heading')) !== '';
+        }
+        if ($this->type === 'carousel') {
+            return trim((string) data_get($this->presentation, 'slides.0.title')) !== '';
+        }
+
+        return false;
     }
 
     protected function applyComplianceIssues(array $issues): void
@@ -101,6 +132,30 @@ class Section extends Model
         if ($this->type === 'carousel' && $this->isDirty('slider_id') && BackendAuth::getUser()
             && !BackendAuth::userHasPermission('humlnetcreative.pages.slider.select')) {
             throw new \ValidationException(['slider' => 'Nemáte oprávnění měnit vybraný Slider.']);
+        }
+        if ($this->type === 'accordion' && $this->is_published && !$this->faq_group_id) {
+            throw new \ValidationException(['faq_group' => 'Pro zobrazené FAQ vyberte FAQ skupinu.']);
+        }
+        if ($this->type === 'accordion' && $this->is_published && $this->faq_group_id
+            && (!$this->faq_group || !$this->faq_group->is_enabled || $this->faq_items->isEmpty())) {
+            throw new \ValidationException(['faq_group' => 'Publikovaná FAQ skupina musí obsahovat alespoň jednu publikovanou otázku s odpovědí.']);
+        }
+        if ($this->type === 'accordion' && $this->isDirty('faq_group_id') && BackendAuth::getUser()
+            && !BackendAuth::userHasPermission('humlnetcreative.pages.faq.select')) {
+            throw new \ValidationException(['faq_group' => 'Nemáte oprávnění měnit vybranou FAQ skupinu.']);
+        }
+        if ($this->type === 'gallery' && $this->is_published && !$this->gallery_id) {
+            throw new \ValidationException(['gallery' => 'Pro zobrazenou Galerii vyberte zdrojovou galerii.']);
+        }
+        if ($this->type === 'gallery' && $this->is_published && $this->gallery_id && (!$this->gallery || $this->gallery->images->isEmpty())) {
+            throw new \ValidationException(['gallery' => 'Publikovaná Galerie musí obsahovat alespoň jeden obrázek.']);
+        }
+        if ($this->type === 'gallery' && $this->isDirty('gallery_id') && BackendAuth::getUser()
+            && !BackendAuth::userHasPermission('humlnetcreative.pages.gallery.select')) {
+            throw new \ValidationException(['gallery' => 'Nemáte oprávnění měnit vybranou Galerii.']);
+        }
+        if ($this->type === 'gallery' && !in_array((int) data_get($this->content, 'gallery_columns', 3), [1, 2, 3, 4, 5, 6], true)) {
+            throw new \ValidationException(['content' => 'Počet obrázků Galerie na řádku musí být 1 až 6.']);
         }
         if ($this->type === 'carousel') {
             $position = data_get($this->content, 'position', 'left-center');

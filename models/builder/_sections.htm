@@ -1,17 +1,17 @@
-<div class="callout callout-info mb-3">
-    <div class="content">
+<div class="hucr-section-picker mb-3">
+    <div class="hucr-section-picker__header">
         <h4>Přidat sekci</h4>
-        <p>Typy, které zde vidíte, určuje oprávnění vaší backendové role.</p>
-        <div class="btn-group">
-            <?php foreach (\HumlnetCreative\Pages\Services\SectionRegistry::instance()->optionsForBackendUser() as $type => $label): ?>
-                <button type="button" class="btn btn-default"
-                    data-request="onAddSection"
-                    data-request-data="builder_page_id: <?= $model->id ?>, section_type: '<?= $type ?>'"
-                    data-request-success="window.location.reload()">
-                    <?= e($label) ?>
-                </button>
-            <?php endforeach ?>
-        </div>
+        <p>Výběr odpovídá oprávněním vaší backendové role.</p>
+    </div>
+    <div class="hucr-section-picker__options">
+        <?php foreach (\HumlnetCreative\Pages\Services\SectionRegistry::instance()->optionsForBackendUser() as $type => $label): ?>
+            <button type="button" class="btn btn-default"
+                data-request="onAddSection"
+                data-request-data="builder_page_id: <?= $model->id ?>, section_type: '<?= $type ?>'"
+                data-load-indicator="Přidávám sekci…">
+                <?= e($label) ?>
+            </button>
+        <?php endforeach ?>
     </div>
 </div>
 <?= $this->relationRender('sections') ?>

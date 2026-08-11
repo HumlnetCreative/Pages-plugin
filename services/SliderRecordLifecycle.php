@@ -9,8 +9,8 @@ class SliderRecordLifecycle
     public static function bind(EntryRecord $model): void
     {
         $model->bindEvent('model.beforeCreate', function() use ($model) {
-            if ($model->blueprint_uuid === 'lzaplata_slider_slides') {
-                $model->is_enabled = false;
+            if ($model->blueprint_uuid === 'lzaplata_slider_slides' && $model->is_enabled === null) {
+                $model->is_enabled = true;
             }
         });
         $model->bindEvent('model.beforeSave', function() use ($model) {

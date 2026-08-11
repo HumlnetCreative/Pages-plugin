@@ -10,11 +10,13 @@ use HumlnetCreative\Pages\Models\BuilderPage;
 use HumlnetCreative\Pages\Models\Section;
 use HumlnetCreative\Pages\Models\SectionItem;
 use HumlnetCreative\Pages\Models\MediaUse;
+use HumlnetCreative\Pages\Models\SliderMediaContext;
 use HumlnetCreative\Pages\Services\MediaService;
 use HumlnetCreative\Pages\Services\SectionRegistry;
 use Backend\Facades\BackendAuth;
 use Illuminate\Support\Facades\Storage;
 use Flash;
+use Tailor\Classes\BlueprintIndexer;
 
 class BuilderPages extends Controller
 {
@@ -77,6 +79,14 @@ class BuilderPages extends Controller
         });
     }
 
+    /** Opens an existing page on its editorial content unless a URL hash overrides it. */
+    public function formExtendFields($form): void
+    {
+        if ($form->model instanceof BuilderPage && $form->model->exists) {
+            $form->getTab('primary')?->activeTab('Obsah');
+        }
+    }
+
     /** Keeps each section editor focused on fields rendered by that section type. */
     protected function pruneSectionForm($widget, string $type): void
     {
@@ -85,17 +95,23 @@ class BuilderPages extends Controller
             'position' => ['content[position]'], 'image_position' => ['content[image_position]'],
             'image_text_gap' => ['layout[image_text_gap]'],
             'autoplay' => ['content[autoplay]'],
-            'slider' => ['slider', '_slider_actions'],
-            'carousel_options' => ['content[autoplay]', 'content[autoplay_delay]', 'content[navigation]', 'content[pagination]', 'content[overlay]', 'content[position]'],
+            'slider' => ['_carousel_slider', 'slider', '_slider_actions'],
+            'faq_group' => ['_faq_group', 'faq_group', '_faq_actions'],
+            'gallery' => ['_gallery_source', 'gallery', '_gallery_actions'],
+            'gallery_columns' => ['content[gallery_columns]'],
+            'carousel_options' => ['_carousel_appearance', '_carousel_playback', 'content[autoplay]', 'content[playback_control]', 'content[autoplay_delay]', 'content[navigation]', 'content[pagination]', 'content[overlay]', 'content[position]'],
             'cta' => ['content[cta_label]', 'content[cta_url]'],
             'columns' => ['content[columns]'], 'embed' => ['content[embed]'],
             'media' => ['media'], 'items' => ['items'],
         ];
         $specializedFields = [
-            'content[heading]', 'content[text]', 'content[position]', 'content[image_position]',
+            'content[heading]', 'content[text]', '_carousel_appearance', '_carousel_playback', '_carousel_slider', 'content[position]', 'content[image_position]',
             'layout[image_text_gap]',
-            'content[autoplay]', 'content[cta_label]', 'content[cta_url]', 'content[columns]',
+            'content[autoplay]', 'content[playback_control]', 'content[cta_label]', 'content[cta_url]', 'content[columns]',
             'slider', '_slider_actions', 'content[autoplay_delay]', 'content[navigation]', 'content[pagination]', 'content[overlay]',
+            '_faq_group', 'faq_group', '_faq_actions',
+            '_gallery_source', 'gallery', '_gallery_actions',
+            'content[gallery_columns]',
             'content[embed]', 'media', 'items',
         ];
         $allowedFields = $this->expandFieldGroups(SectionRegistry::instance()->sectionFields($type), $fieldMap);
@@ -108,12 +124,18 @@ class BuilderPages extends Controller
 
         if ($type === 'carousel' && ($positionField = $widget->getField('content[position]'))) {
             $positionField->tab = 'Prezentace';
-            $positionField->label = 'Pozice obsahu';
+            $positionField->label = 'Výchozí pozice textu';
+            $positionField->comment = 'Použije se u položek Slideru, které nemají nastavenou vlastní pozici textu.';
         }
 
         // Changing a type in place would leave incompatible content and items behind.
         if ($typeField = $widget->getField('type')) {
             $typeField->readOnly = true;
+        }
+
+        if (in_array($type, ['text', 'accordion', 'gallery'], true)) {
+            $activeTab = ['accordion' => 'FAQ', 'gallery' => 'Galerie'][$type] ?? 'Obsah';
+            $widget->getTab('primary')?->activeTab($activeTab);
         }
     }
 
@@ -125,6 +147,37 @@ class BuilderPages extends Controller
         $sliderId = (int) request()->input('slider_id');
         $this->vars['editorUrl'] = Backend::url('tailor/entries/slider-slider/'.($sliderId ?: 'create'));
         $this->vars['editorTitle'] = $sliderId ? 'Upravit Slider' : 'Vytvořit Slider';
+        return $this->makePartial('slider_editor');
+    }
+
+    public function onOpenFaqEditor()
+    {
+        if (!BackendAuth::userHasPermission('humlnetcreative.pages.faq.manage')) {
+            throw new \ApplicationException('Nemáte oprávnění upravovat FAQ skupiny.');
+        }
+
+        $groupId = (int) request()->input('faq_group_id');
+        $blueprint = BlueprintIndexer::instance()->findSectionByHandle('FAQ\\Group');
+        if (!$blueprint) {
+            throw new \ApplicationException('Blueprint FAQ skupin není dostupný.');
+        }
+
+        $this->vars['editorUrl'] = Backend::url('tailor/entries/'.$blueprint->handleSlug.'/'.($groupId ?: 'create'));
+        $this->vars['editorTitle'] = $groupId ? 'Upravit FAQ skupinu' : 'Vytvořit FAQ skupinu';
+
+        return $this->makePartial('slider_editor');
+    }
+
+    public function onOpenGalleryEditor()
+    {
+        if (!BackendAuth::userHasPermission('humlnetcreative.pages.gallery.manage')) {
+            throw new \ApplicationException('Nemáte oprávnění upravovat Galerie.');
+        }
+
+        $galleryId = (int) request()->input('gallery_id');
+        $this->vars['editorUrl'] = Backend::url('lzaplata/gallery/galleries/'.($galleryId ? 'update/'.$galleryId : 'create'));
+        $this->vars['editorTitle'] = $galleryId ? 'Upravit Galerii' : 'Vytvořit Galerii';
+
         return $this->makePartial('slider_editor');
     }
 
@@ -310,30 +363,8 @@ class BuilderPages extends Controller
         return $this->makePartial('$/humlnetcreative/pages/controllers/builderpages/_media_crop_editor.htm', [
             'mediaUse' => $use,
             'slotDefinition' => $service->slotDefinition($use->slot),
-            'previewUrl' => $this->backendUrlForCurrentRequest(
-                'humlnetcreative/pages/builderpages/previewmedia/'.$use->id
-            ),
+            'previewUrl' => $service->backendMasterUrl($use),
         ]);
-    }
-
-    /**
-     * Builds a backend URL that also works when October is installed in a
-     * subdirectory. Backend::url() only reflects APP_URL, which may omit the
-     * request base path (for example /pages-theme in local development).
-     */
-    protected function backendUrlForCurrentRequest(string $path): string
-    {
-        $backendUrl = Backend::url($path);
-        $backendPath = parse_url($backendUrl, PHP_URL_PATH) ?: '/'.ltrim($path, '/');
-        $basePath = rtrim((string) request()->getBasePath(), '/');
-
-        if ($basePath !== '' && $backendPath !== $basePath && !str_starts_with($backendPath, $basePath.'/')) {
-            $backendPath = $basePath.'/'.ltrim($backendPath, '/');
-        }
-
-        $query = parse_url($backendUrl, PHP_URL_QUERY);
-
-        return $backendPath.($query ? '?'.$query : '');
     }
 
     /** Saves crop coordinates in original pixels and rebuilds public variants. */
@@ -399,12 +430,19 @@ class BuilderPages extends Controller
             throw new \ApplicationException('Nemáte oprávnění vložit tento typ sekce.');
         }
         $defaults = SectionRegistry::instance()->defaults($type);
+        $requiresSource = in_array($type, ['carousel', 'accordion', 'gallery'], true);
         Section::create([
             'page_id' => $page->id, 'type' => $type, 'title' => $definition['label'],
-            'is_published' => true, 'sort_order' => ((int) $page->sections()->max('sort_order')) + 1,
+            // Relational sections need their content source selected before publication.
+            'is_published' => !$requiresSource,
+            'sort_order' => ((int) $page->sections()->max('sort_order')) + 1,
             'layout' => $defaults['layout'], 'style' => $defaults['style'], 'content' => $defaults['content'],
         ]);
-        Flash::success('Sekce byla přidána na konec stránky.');
+        Flash::success($requiresSource
+            ? 'Sekce byla přidána jako skrytá. Vyberte její obsahový zdroj a potom ji publikujte.'
+            : 'Sekce byla přidána na konec stránky.');
+
+        return $this->relationRefresh('sections');
     }
 
     protected function allowedSectionTypes(): array
@@ -414,6 +452,18 @@ class BuilderPages extends Controller
 
     protected function assertCanManageOwner($owner): void
     {
+        if ($owner instanceof SliderMediaContext) {
+            $canManageSliderMedia = BackendAuth::userHasPermission('humlnetcreative.pages.slider.media.image')
+                || BackendAuth::userHasPermission('humlnetcreative.pages.slider.media.video')
+                || BackendAuth::userHasPermission('humlnetcreative.pages.slider.media.crop');
+
+            if (!$canManageSliderMedia) {
+                throw new \ApplicationException('Nemáte oprávnění upravovat média Slideru.');
+            }
+
+            return;
+        }
+
         $section = $owner instanceof SectionItem ? $owner->section : $owner;
         if (!$section instanceof Section || !SectionRegistry::instance()->has($section->type)) {
             throw new \ApplicationException('Médium není připojeno k platné sekci.');

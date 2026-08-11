@@ -35,6 +35,11 @@ class PresentationService
                 'type' => ($slide->type ?: 'image'),
                 'title' => $slide->title_type === 'custom' ? $slide->title_custom : ($slide->title_type === 'title' ? $slide->title : null),
                 'text' => $slide->text,
+                'position' => in_array($slide->content_position, [
+                    'left-top', 'left-center', 'left-bottom',
+                    'center-top', 'center-center', 'center-bottom',
+                    'right-top', 'right-center', 'right-bottom',
+                ], true) ? $slide->content_position : null,
                 'link' => $slide->link,
                 'link_type' => $slide->link_type,
                 'button' => $slide->btn,

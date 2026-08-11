@@ -149,22 +149,34 @@ class MediaService
         }
 
         if ($crop['x'] < 0 || $crop['y'] < 0 || $crop['width'] < 1 || $crop['height'] < 1
-            || $crop['x'] + $crop['width'] > $asset->width
-            || $crop['y'] + $crop['height'] > $asset->height) {
+            || $crop['x'] + $crop['width'] > $asset->width + 1
+            || $crop['y'] + $crop['height'] > $asset->height + 1) {
             throw new \ValidationException(['crop' => 'Ořez musí ležet uvnitř původního obrázku.']);
         }
 
         $definition = $this->slotDefinition($slot);
+        $ratio = $this->ratio($definition['ratio']);
+        $actualRatio = $crop['width'] / $crop['height'];
+        if (abs($actualRatio - $ratio) / $ratio > 0.005) {
+            throw new \ValidationException(['crop' => "Ořez musí zachovat poměr {$definition['ratio']}."]);
+        }
+
+        // The browser cropper uses floating-point coordinates. Keep the crop
+        // inside the selected rectangle while aligning rounded pixel values.
+        if ($actualRatio > $ratio) {
+            $crop['width'] = max(1, (int) round($crop['height'] * $ratio));
+        }
+        else {
+            $crop['height'] = max(1, (int) round($crop['width'] / $ratio));
+        }
+        $crop['x'] = min($crop['x'], max(0, $asset->width - $crop['width']));
+        $crop['y'] = min($crop['y'], max(0, $asset->height - $crop['height']));
+
         [$minimumWidth, $minimumHeight] = $definition['minimum'];
         if ($crop['width'] < $minimumWidth || $crop['height'] < $minimumHeight) {
             throw new \ValidationException([
                 'crop' => "Výřez musí mít alespoň {$minimumWidth}×{$minimumHeight} px.",
             ]);
-        }
-
-        $ratio = $this->ratio($definition['ratio']);
-        if (abs($crop['width'] - ($crop['height'] * $ratio)) > 2) {
-            throw new \ValidationException(['crop' => "Ořez musí zachovat poměr {$definition['ratio']}."]);
         }
 
         return $crop;
@@ -249,12 +261,7 @@ class MediaService
             $url = array_values($previewVariants)[count($previewVariants) - 1];
         }
         else {
-            $backendUrl = \Backend::url('humlnetcreative/pages/builderpages/previewmedia/'.$use->id);
-            $url = parse_url($backendUrl, PHP_URL_PATH) ?: $backendUrl;
-            $basePath = rtrim((string) request()->getBasePath(), '/');
-            if ($basePath !== '' && $url !== $basePath && !str_starts_with($url, $basePath.'/')) {
-                $url = $basePath.'/'.ltrim($url, '/');
-            }
+            $url = $this->backendMasterUrl($use, false);
         }
 
         $revision = substr(hash('sha256', json_encode([
@@ -262,6 +269,29 @@ class MediaService
             'variants' => $use->variants,
             'updated_at' => $use->updated_at?->format('Y-m-d H:i:s.u'),
         ])), 0, 12);
+
+        return $url.(str_contains($url, '?') ? '&' : '?').'v='.$revision;
+    }
+
+    /** Returns a private master URL that also works in subdirectory installs. */
+    public function backendMasterUrl(MediaUse $use, bool $cacheBust = true): string
+    {
+        $backendUrl = \Backend::url('humlnetcreative/pages/builderpages/previewmedia/'.$use->id);
+        $backendPath = parse_url($backendUrl, PHP_URL_PATH) ?: '/humlnetcreative/pages/builderpages/previewmedia/'.$use->id;
+        $basePath = rtrim((string) request()->getBasePath(), '/');
+
+        if ($basePath !== '' && $backendPath !== $basePath && !str_starts_with($backendPath, $basePath.'/')) {
+            $backendPath = $basePath.'/'.ltrim($backendPath, '/');
+        }
+
+        $query = parse_url($backendUrl, PHP_URL_QUERY);
+        $url = $backendPath.($query ? '?'.$query : '');
+
+        if (!$cacheBust) {
+            return $url;
+        }
+
+        $revision = $use->asset?->updated_at?->timestamp ?: $use->updated_at?->timestamp ?: 0;
 
         return $url.(str_contains($url, '?') ? '&' : '?').'v='.$revision;
     }

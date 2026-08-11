@@ -1,0 +1,36 @@
+.hucr-section-picker {
+    padding: 16px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+    background: var(--bs-body-bg);
+}
+
+.hucr-section-picker__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 20px;
+    margin-bottom: 12px;
+}
+
+.hucr-section-picker__header h4,
+.hucr-section-picker__header p {
+    margin: 0;
+}
+
+.hucr-section-picker__header p {
+    color: var(--bs-secondary-color);
+}
+
+.hucr-section-picker__options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+}
+
+.hucr-section-picker__options .btn {
+    min-width: 0;
+    border-radius: 4px;
+    white-space: normal;
+}

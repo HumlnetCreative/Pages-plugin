@@ -173,3 +173,11 @@ v3.0.3:
 v3.1.0:
     - 'Connect Page Builder presentations to Tailor sliders and add slider media contexts'
     - add_slider_builder_integration.php
+v3.2.0:
+    - 'Connect reusable Tailor FAQ groups to Page Builder FAQ sections'
+    - add_faq_builder_integration.php
+    - extend_client_role_faq_permissions.php
+v3.3.0:
+    - 'Connect reusable Gallery plugin galleries to Page Builder gallery sections'
+    - add_gallery_builder_integration.php
+    - extend_client_role_gallery_permissions.php

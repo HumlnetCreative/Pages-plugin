@@ -569,6 +569,9 @@
             'page' => [
                 'label' => 'Stránka',
             ],
+            'builder_page' => [
+                'label' => 'Stránka z Page Builderu',
+            ],
         ],
         'submenu' => [
             'structure' => [
