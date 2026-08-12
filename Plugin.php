@@ -23,17 +23,24 @@ use Tailor\Models\StructureRecord;
 use HumlnetCreative\Pages\Services\SliderRecordLifecycle;
 use HumlnetCreative\Pages\Services\FaqRecordLifecycle;
 use HumlnetCreative\Pages\Services\GalleryRecordLifecycle;
+use HumlnetCreative\Pages\Contracts\RedirectManagerInterface;
+use HumlnetCreative\Pages\Services\VdlpRedirectAdapter;
 
 /**
  * Plugin class
  */
 class Plugin extends PluginBase
 {
+    /** @var array Required October plugins. */
+    public $require = ['Vdlp.Redirect'];
+
     /**
      * register method, called when the plugin is first registered.
      */
     public function register(): void
     {
+        $this->app->singleton(RedirectManagerInterface::class, VdlpRedirectAdapter::class);
+
         if (!Schema::hasTable('system_plugin_versions')) {
             return;
         }

@@ -22,6 +22,8 @@ class SectionRegistry
         $this->definitions = [
             'hero' => [
                 'label' => 'Hero', 'permission' => 'humlnetcreative.pages.section.hero', 'items' => false,
+                'category' => 'media', 'allowed_in_columns' => false,
+                'wireframe' => ['heading' => 'content.heading', 'text' => 'content.text', 'thumbnail' => 'hero_desktop'],
                 'section_fields' => ['heading', 'text', 'position', 'cta', 'media'],
                 'section_style_fields' => ['heading', 'text', 'cta'],
                 'section_media_slots' => ['hero_desktop', 'hero_mobile'],
@@ -29,6 +31,8 @@ class SectionRegistry
             ],
             'carousel' => [
                 'label' => 'Prezentace', 'permission' => 'humlnetcreative.pages.section.carousel', 'items' => false,
+                'category' => 'media', 'allowed_in_columns' => false,
+                'wireframe' => ['heading' => 'title', 'shared_source' => 'slider', 'item_count' => 'presentation.slides'],
                 'section_fields' => ['slider', 'carousel_options'],
                 'section_style_fields' => ['container', 'heading', 'text', 'cta'],
                 'defaults' => ['layout' => ['width' => 'full', 'spacing' => 'none'], 'content' => [
@@ -38,16 +42,22 @@ class SectionRegistry
             ],
             'text' => [
                 'label' => 'Text', 'permission' => 'humlnetcreative.pages.section.text', 'items' => false,
+                'category' => 'basic', 'minimum_width_units' => 1, 'supports_fill_height' => true,
+                'wireframe' => ['heading' => 'content.heading', 'text' => 'content.text'],
                 'section_fields' => ['heading', 'text'], 'section_style_fields' => ['heading', 'text'],
             ],
             'image_text' => [
                 'label' => 'Text s obrázkem', 'permission' => 'humlnetcreative.pages.section.image_text', 'items' => false,
+                'category' => 'media', 'minimum_width_units' => 2, 'supports_fill_height' => true,
+                'wireframe' => ['heading' => 'content.heading', 'text' => 'content.text', 'thumbnail' => 'image_text'],
                 'section_fields' => ['heading', 'text', 'image_position', 'image_text_gap', 'cta', 'media'],
                 'section_style_fields' => ['heading', 'text', 'cta'], 'section_media_slots' => ['image_text'],
                 'defaults' => ['layout' => ['image_text_gap' => 'standard'], 'content' => ['image_position' => 'left']],
             ],
             'cards' => [
                 'label' => 'Karty', 'permission' => 'humlnetcreative.pages.section.cards', 'items' => true,
+                'category' => 'basic', 'minimum_width_units' => 2,
+                'wireframe' => ['heading' => 'content.heading', 'text' => 'content.text', 'item_count' => 'items'],
                 'section_fields' => ['heading', 'text', 'columns', 'items'],
                 'section_style_fields' => ['heading', 'text'],
                 'item_fields' => ['heading', 'icon', 'text', 'cta', 'style', 'move_card', 'media'],
@@ -56,30 +66,38 @@ class SectionRegistry
             ],
             'cta' => [
                 'label' => 'CTA / pruh', 'permission' => 'humlnetcreative.pages.section.cta', 'items' => false,
+                'category' => 'basic', 'minimum_width_units' => 1, 'supports_fill_height' => true,
+                'wireframe' => ['heading' => 'content.heading', 'text' => 'content.text'],
                 'section_fields' => ['heading', 'text', 'cta'],
                 'section_style_fields' => ['container', 'heading', 'text', 'cta'],
             ],
             'accordion' => [
                 'label' => 'FAQ', 'permission' => 'humlnetcreative.pages.section.accordion', 'items' => false,
+                'category' => 'basic', 'minimum_width_units' => 1,
+                'wireframe' => ['heading' => 'content.heading', 'shared_source' => 'faq_group', 'item_count' => 'faq_items'],
                 'section_fields' => ['heading', 'faq_group'], 'section_style_fields' => ['heading'],
             ],
             'gallery' => [
                 'label' => 'Galerie', 'permission' => 'humlnetcreative.pages.section.gallery', 'items' => false,
+                'category' => 'media', 'minimum_width_units' => 1,
+                'wireframe' => ['heading' => 'content.heading', 'shared_source' => 'gallery', 'item_count' => 'gallery.images'],
                 'section_fields' => ['heading', 'gallery', 'gallery_columns'], 'section_style_fields' => ['heading'],
                 'defaults' => ['content' => ['gallery_columns' => 3]],
             ],
-            'files' => ['label' => 'Soubory ke stažení', 'permission' => 'humlnetcreative.pages.section.files', 'items' => false, 'enabled' => false],
-            'form' => ['label' => 'Formulář', 'permission' => 'humlnetcreative.pages.section.form', 'items' => false, 'enabled' => false],
+            'files' => ['label' => 'Soubory ke stažení', 'permission' => 'humlnetcreative.pages.section.files', 'items' => false, 'enabled' => false, 'category' => 'basic', 'minimum_width_units' => 1],
+            'form' => ['label' => 'Formulář', 'permission' => 'humlnetcreative.pages.section.form', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
             'embed' => [
                 'label' => 'Vložený obsah', 'permission' => 'humlnetcreative.pages.section.embed', 'items' => false,
+                'category' => 'media', 'minimum_width_units' => 2,
+                'wireframe' => ['heading' => 'title', 'text' => 'content.embed'],
                 'section_fields' => ['embed'], 'section_style_fields' => [],
             ],
-            'posts' => ['label' => 'Příspěvky', 'permission' => 'humlnetcreative.pages.section.posts', 'items' => false, 'enabled' => false],
-            'opening_hours' => ['label' => 'Otevírací doba', 'permission' => 'humlnetcreative.pages.section.opening_hours', 'items' => false, 'enabled' => false],
-            'pricelist' => ['label' => 'Ceník', 'permission' => 'humlnetcreative.pages.section.pricelist', 'items' => false, 'enabled' => false],
-            'timeline' => ['label' => 'Časová osa', 'permission' => 'humlnetcreative.pages.section.timeline', 'items' => false, 'enabled' => false],
-            'links' => ['label' => 'Odkazy', 'permission' => 'humlnetcreative.pages.section.links', 'items' => false, 'enabled' => false],
-            'flash_messages' => ['label' => 'Flash zprávy', 'permission' => 'humlnetcreative.pages.section.flash_messages', 'items' => false, 'enabled' => false],
+            'posts' => ['label' => 'Příspěvky', 'permission' => 'humlnetcreative.pages.section.posts', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 2],
+            'opening_hours' => ['label' => 'Otevírací doba', 'permission' => 'humlnetcreative.pages.section.opening_hours', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
+            'pricelist' => ['label' => 'Ceník', 'permission' => 'humlnetcreative.pages.section.pricelist', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
+            'timeline' => ['label' => 'Časová osa', 'permission' => 'humlnetcreative.pages.section.timeline', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
+            'links' => ['label' => 'Odkazy', 'permission' => 'humlnetcreative.pages.section.links', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
+            'flash_messages' => ['label' => 'Flash zprávy', 'permission' => 'humlnetcreative.pages.section.flash_messages', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
         ];
 
         $theme = Theme::getActiveTheme();
@@ -88,6 +106,24 @@ class SectionRegistry
             foreach ((require $path) as $type => $themeDefinition) {
                 $this->definitions[$type] = array_replace($this->definitions[$type] ?? [], $themeDefinition);
             }
+        }
+
+        foreach ($this->definitions as $type => $definition) {
+            $this->definitions[$type] = array_replace([
+                'category' => 'project',
+                'allowed_in_columns' => true,
+                'minimum_width_units' => 1,
+                'supports_fill_height' => false,
+                'wireframe' => ['heading' => 'content.heading', 'text' => null, 'thumbnail' => null, 'item_count' => null, 'shared_source' => null],
+            ], $definition, [
+                'wireframe' => array_replace([
+                    'heading' => 'content.heading',
+                    'text' => null,
+                    'thumbnail' => null,
+                    'item_count' => null,
+                    'shared_source' => null,
+                ], $definition['wireframe'] ?? []),
+            ]);
         }
     }
 
@@ -101,6 +137,11 @@ class SectionRegistry
     public function itemStyleFields(string $type): array { return $this->definitions[$type]['item_style_fields'] ?? []; }
     public function sectionMediaSlots(string $type): array { return $this->definitions[$type]['section_media_slots'] ?? []; }
     public function itemMediaSlots(string $type): array { return $this->definitions[$type]['item_media_slots'] ?? []; }
+    public function category(string $type): string { return $this->definitions[$type]['category']; }
+    public function allowedInColumns(string $type): bool { return (bool) $this->definitions[$type]['allowed_in_columns']; }
+    public function minimumWidthUnits(string $type): int { return (int) $this->definitions[$type]['minimum_width_units']; }
+    public function supportsFillHeight(string $type): bool { return (bool) $this->definitions[$type]['supports_fill_height']; }
+    public function wireframe(string $type): array { return $this->definitions[$type]['wireframe']; }
 
     public function defaults(string $type): array
     {
