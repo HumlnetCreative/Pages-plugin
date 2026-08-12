@@ -70,6 +70,7 @@ final class PagePublicationService
         // Filesystem cleanup is deliberately outside the DB transaction. A rollback can
         // therefore never remove a file still referenced by a retained revision.
         app(MediaReferenceService::class)->cleanupReleasedReferences($releasedReferences);
+        app(PageCommandHistory::class)->clear($page->id);
 
         return $revision;
     }

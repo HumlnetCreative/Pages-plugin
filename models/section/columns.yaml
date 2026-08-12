@@ -7,3 +7,8 @@ columns:
     is_published:
         label: Viditelná
         type: switch
+    command_actions:
+        label: Akce
+        type: partial
+        path: $/humlnetcreative/pages/models/section/_command_actions.php
+        clickable: false

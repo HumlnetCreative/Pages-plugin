@@ -230,6 +230,11 @@ class Plugin extends PluginBase
         $permissions['humlnetcreative.pages.draft.discard'] = ['label' => 'Koncept: zahodit změny', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.history.restore'] = ['label' => 'Historie: obnovit do konceptu', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.lock.takeover'] = ['label' => 'Zámek stránky: převzít', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.structure.create_delete'] = ['label' => 'Struktura: přidávat, odstraňovat a obnovovat', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.structure.reorder'] = ['label' => 'Struktura: měnit pořadí a přesouvat', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.structure.duplicate'] = ['label' => 'Struktura: duplikovat', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.structure.copy'] = ['label' => 'Struktura: kopírovat mezi stránkami', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.structure.appearance'] = ['label' => 'Vzhled: měnit rozvržení a barevná schémata', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.editor.html'] = ['label' => 'Rich editor: HTML zdroj a tabulky', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.schemes.manage'] = ['label' => 'Vývojář: definice barevných schémat theme', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.slider.manage'] = ['label' => 'Prezentace: správa Sliderů a položek', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];

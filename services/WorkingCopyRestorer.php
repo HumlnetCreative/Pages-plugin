@@ -16,7 +16,7 @@ final class WorkingCopyRestorer
     {
         $snapshot = PageSnapshot::fromArray((array) $revision->snapshot);
 
-        return DraftStateService::withoutTracking(function() use ($revision, $snapshot, $asDraft): BuilderPage {
+        $page = DraftStateService::withoutTracking(function() use ($revision, $snapshot, $asDraft): BuilderPage {
             return DB::transaction(function() use ($revision, $snapshot, $asDraft): BuilderPage {
                 $page = BuilderPage::withoutGlobalScopes()->lockForUpdate()->findOrFail($revision->page_id);
                 $pageData = $snapshot->page;
@@ -71,6 +71,10 @@ final class WorkingCopyRestorer
                 return BuilderPage::withoutGlobalScopes()->findOrFail($page->id);
             });
         });
+
+        app(PageCommandHistory::class)->clear($page->id);
+
+        return $page;
     }
 
     public function discard(BuilderPage $page): BuilderPage
@@ -132,6 +136,7 @@ final class WorkingCopyRestorer
         });
 
         app(MediaReferenceService::class)->cleanupReleasedReferences($released);
+        app(PageCommandHistory::class)->clear($page->id);
     }
 
     private function upsertSection(int $pageId, array $data): int

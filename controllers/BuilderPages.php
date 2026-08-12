@@ -13,10 +13,13 @@ use HumlnetCreative\Pages\Models\MediaUse;
 use HumlnetCreative\Pages\Models\PageAuditLog;
 use HumlnetCreative\Pages\Models\PageRevision;
 use HumlnetCreative\Pages\Models\SliderMediaContext;
+use HumlnetCreative\Pages\Classes\Commands\PageCommand;
 use HumlnetCreative\Pages\Services\EditorSessionService;
 use HumlnetCreative\Pages\Services\MediaService;
 use HumlnetCreative\Pages\Services\PageEditLockService;
 use HumlnetCreative\Pages\Services\PagePublicationService;
+use HumlnetCreative\Pages\Services\PageCommandService;
+use HumlnetCreative\Pages\Services\PageCommandHistory;
 use HumlnetCreative\Pages\Services\SectionRegistry;
 use HumlnetCreative\Pages\Services\WorkingCopyRestorer;
 use Backend\Facades\BackendAuth;
@@ -66,6 +69,8 @@ class BuilderPages extends Controller
             ? (int) data_get($latestLifecycleAudit->payload, 'version')
             : null;
 
+        app(PageCommandHistory::class)->reconcile($page->id, (int) $page->draft_version);
+
         return $result;
     }
 
@@ -82,6 +87,30 @@ class BuilderPages extends Controller
         Flash::success('Koncept byl uložen a publikován jako nová verze.');
 
         return Backend::redirect('humlnetcreative/pages/builderpages/update/'.$page->id);
+    }
+
+    /** Keeps the browser's optimistic draft version synchronized after normal page-field saves. */
+    public function onSave($recordId = null)
+    {
+        if ($this->action === 'create') {
+            return $this->asExtension('FormController')->create_onSave();
+        }
+
+        $page = $this->pageForRequest($recordId);
+        $this->assertWritablePage($page);
+        $response = $this->asExtension('FormController')->update_onSave($page->id);
+        $page = BuilderPage::withoutGlobalScopes()->findOrFail($page->id);
+        app(PageCommandHistory::class)->synchronize($page->id, (int) $page->draft_version);
+        // October 4.3's response bridge maps this queue method to a non-blocking
+        // browser event. The synchronous variant is mapped to an awaited event
+        // and would prevent the relation DOM patches below from being applied.
+        $this->dispatchBrowserEventAsync('hucr:draft-version', [
+            'pageId' => $page->id,
+            'draftVersion' => (int) $page->draft_version,
+            'hasDraft' => (bool) $page->has_draft,
+        ]);
+
+        return $response;
     }
 
     /** Releases the soft lock when the standard Save & close action ends the editor. */
@@ -210,6 +239,140 @@ class BuilderPages extends Controller
         elseif ($field === 'items') {
             $widget->bindEvent('list.extendQueryBefore', fn($query) => $query->whereHas('section', fn($section) => $section->whereIn('type', $allowed)));
         }
+
+        $widget->bindEvent('list.beforeReorderStructure', function($moved) use ($field) {
+            if (!in_array($field, ['sections', 'items'], true)) {
+                return;
+            }
+
+            $ids = array_map('intval', (array) request()->input('sort_orders', []));
+            if ($field === 'sections' && $moved instanceof Section) {
+                $page = $moved->page;
+                $ordered = Section::where('page_id', $page->id)->whereIn('id', $ids)
+                    ->get()->keyBy('id');
+                $uuids = array_values(array_filter(array_map(fn($id) => $ordered->get($id)?->uuid, $ids)));
+                $result = $this->runPageCommand($page, 'section.reorder', ['ordered_uuids' => $uuids]);
+            }
+            elseif ($field === 'items' && $moved instanceof SectionItem) {
+                $section = $moved->section;
+                $page = $section->page;
+                $ordered = SectionItem::where('section_id', $section->id)->whereIn('id', $ids)
+                    ->get()->keyBy('id');
+                $uuids = array_values(array_filter(array_map(fn($id) => $ordered->get($id)?->uuid, $ids)));
+                $result = $this->runPageCommand($page, 'item.reorder', [
+                    'section_uuid' => $section->uuid,
+                    'ordered_uuids' => $uuids,
+                ]);
+            }
+            else {
+                return;
+            }
+
+            $this->announceCommandResult($result);
+
+            // The command already persisted the complete order.
+            return false;
+        }, 100);
+    }
+
+    /** Routes October's existing relation popups through the shared command API. */
+    public function onRelationManageCreate(): array
+    {
+        [$page, $field, $widget] = $this->commandRelationContext();
+        $data = $this->normalizeRelationSaveData($widget->getSaveData());
+
+        if ($field === 'sections') {
+            $result = $this->runPageCommand($page, 'section.create', $data);
+        }
+        elseif ($field === 'items') {
+            $section = $this->relationItemSection();
+            $result = $this->runPageCommand($page, 'item.create', $data + ['section_uuid' => $section->uuid]);
+        }
+        else {
+            throw new \ApplicationException('Tato relace není součástí Page Builder příkazů.');
+        }
+
+        $this->announceCommandResult($result);
+        Flash::success($field === 'sections' ? 'Sekce byla přidána.' : 'Položka byla přidána.');
+
+        return $this->asExtension('RelationController')->relationRefresh($field);
+    }
+
+    /** Action-prefixed handlers take precedence over October's behavior handlers. */
+    public function update_onRelationManageCreate(): array
+    {
+        return $this->onRelationManageCreate();
+    }
+
+    public function onRelationManageUpdate(): array
+    {
+        [$page, $field, $widget] = $this->commandRelationContext();
+        $model = $widget->model;
+        $data = $this->normalizeRelationSaveData($widget->getSaveData());
+
+        if ($field === 'sections' && $model instanceof Section) {
+            $result = $this->runPageCommand($page, 'section.update', ['uuid' => $model->uuid, 'changes' => $data]);
+        }
+        elseif ($field === 'items' && $model instanceof SectionItem) {
+            $result = $this->runPageCommand($page, 'item.update', ['uuid' => $model->uuid, 'changes' => $data]);
+        }
+        else {
+            throw new \ApplicationException('Upravovaný záznam nepatří do Page Builderu.');
+        }
+
+        $this->announceCommandResult($result);
+        Flash::success($field === 'sections' ? 'Sekce byla uložena.' : 'Položka byla uložena.');
+
+        return $this->asExtension('RelationController')->relationRefresh($field);
+    }
+
+    public function update_onRelationManageUpdate(): array
+    {
+        return $this->onRelationManageUpdate();
+    }
+
+    public function onRelationManageDelete(): array
+    {
+        $page = $this->pageForRequest();
+        $field = (string) request()->input('_relation_field');
+        $this->asExtension('RelationController')->initRelation($page, $field);
+        $ids = array_map('intval', (array) request()->input('checked', []));
+        if ($field === 'sections') {
+            $uuids = Section::where('page_id', $page->id)->whereIn('id', $ids)->pluck('uuid')->all();
+            $name = 'section.delete_many';
+        }
+        elseif ($field === 'items') {
+            $uuids = SectionItem::whereHas('section', fn($query) => $query->where('page_id', $page->id))
+                ->whereIn('id', $ids)->pluck('uuid')->all();
+            $name = 'item.delete_many';
+        }
+        else {
+            throw new \ApplicationException('Tato relace není součástí Page Builder příkazů.');
+        }
+        $result = $this->runPageCommand($page, $name, ['uuids' => $uuids]);
+        $this->announceCommandResult($result);
+        Flash::success($field === 'sections' ? 'Sekce byly odstraněny.' : 'Položky byly odstraněny.');
+
+        return $this->asExtension('RelationController')->relationRefresh($field);
+    }
+
+    public function update_onRelationManageDelete(): array
+    {
+        return $this->onRelationManageDelete();
+    }
+
+    /**
+     * RelationController's delete toolbar posts this public button handler.
+     * Intercept it before the behavior delegates to its own non-command delete.
+     */
+    public function onRelationButtonDelete(): array
+    {
+        return $this->onRelationManageDelete();
+    }
+
+    public function update_onRelationButtonDelete(): array
+    {
+        return $this->onRelationManageDelete();
     }
 
     public function relationExtendManageFormQuery($field, $query)
@@ -418,16 +581,21 @@ class BuilderPages extends Controller
         }
         $targetId = request()->input('target_section_id');
         if ($targetId === '__new') {
-            $target = Section::create([
-                'page_id' => $source->page_id, 'type' => 'cards', 'title' => 'Nový blok Karet',
-                'is_published' => true, 'sort_order' => ((int) Section::where('page_id', $source->page_id)->max('sort_order')) + 1,
-                'layout' => ['width' => 'contained', 'spacing' => 'standard'], 'content' => ['columns' => 3],
+            $created = $this->runPageCommand($source->page, 'section.create', [
+                'type' => 'cards',
+                'title' => 'Nový blok Karet',
             ]);
+            $target = Section::where('page_id', $source->page_id)->where('uuid', $created->data['section_uuid'])->firstOrFail();
+            request()->merge(['expected_draft_version' => $created->draftVersion]);
         }
         else {
             $target = Section::findOrFail((int) $targetId);
         }
-        $item->moveToSection($target);
+        $result = $this->runPageCommand($source->page, 'item.move', [
+            'uuid' => $item->uuid,
+            'target_section_uuid' => $target->uuid,
+        ]);
+        $this->announceCommandResult($result);
         Flash::success('Karta byla přesunuta.');
     }
 
@@ -601,20 +769,81 @@ class BuilderPages extends Controller
         if (!BackendAuth::userHasPermission($definition['permission'])) {
             throw new \ApplicationException('Nemáte oprávnění vložit tento typ sekce.');
         }
-        $defaults = SectionRegistry::instance()->defaults($type);
         $requiresSource = in_array($type, ['carousel', 'accordion', 'gallery'], true);
-        Section::create([
-            'page_id' => $page->id, 'type' => $type, 'title' => $definition['label'],
+        $result = $this->runPageCommand($page, 'section.create', [
+            'type' => $type,
+            'title' => $definition['label'],
             // Relational sections need their content source selected before publication.
             'is_published' => !$requiresSource,
-            'sort_order' => ((int) $page->sections()->max('sort_order')) + 1,
-            'layout' => $defaults['layout'], 'style' => $defaults['style'], 'content' => $defaults['content'],
         ]);
+        $this->announceCommandResult($result);
         Flash::success($requiresSource
             ? 'Sekce byla přidána jako skrytá. Vyberte její obsahový zdroj a potom ji publikujte.'
             : 'Sekce byla přidána na konec stránky.');
 
         return $this->relationRefresh('sections');
+    }
+
+    public function onDuplicateSection(): array
+    {
+        $page = $this->pageForRequest();
+        $section = Section::where('page_id', $page->id)->findOrFail((int) request()->input('section_id'));
+        $result = $this->runPageCommand($page, 'section.duplicate', ['uuid' => $section->uuid]);
+        $this->announceCommandResult($result);
+        Flash::success('Sekce byla duplikována včetně lokálního obsahu.');
+
+        return $this->relationRefresh('sections');
+    }
+
+    public function onCopySection(): array
+    {
+        $page = $this->pageForRequest();
+        $section = Section::where('page_id', $page->id)->findOrFail((int) request()->input('section_id'));
+        $this->runPageCommand($page, 'section.copy', ['uuid' => $section->uuid]);
+        Flash::success('Sekce byla zkopírována do editorové schránky.');
+
+        return [];
+    }
+
+    public function onPasteSection(): array
+    {
+        $page = $this->pageForRequest();
+        $result = $this->runPageCommand($page, 'section.paste');
+        $this->announceCommandResult($result);
+        Flash::success('Sekce byla vložena s novými lokálními identifikátory.');
+
+        return $this->relationRefresh('sections');
+    }
+
+    public function onDuplicateItem(): array
+    {
+        $item = SectionItem::findOrFail((int) request()->input('item_id'));
+        $page = $item->section->page;
+        $result = $this->runPageCommand($page, 'item.duplicate', ['uuid' => $item->uuid]);
+        $this->announceCommandResult($result);
+        Flash::success('Položka byla duplikována.');
+
+        return $this->relationRefresh('items');
+    }
+
+    public function onUndoCommand(): array
+    {
+        $page = $this->pageForRequest();
+        $result = app(PageCommandService::class)->undo($page->id, $this->expectedDraftVersion());
+        $this->announceCommandResult($result);
+        Flash::success('Poslední změna v této relaci byla vrácena.');
+
+        return $this->commandRefresh($page);
+    }
+
+    public function onRedoCommand(): array
+    {
+        $page = $this->pageForRequest();
+        $result = app(PageCommandService::class)->redo($page->id, $this->expectedDraftVersion());
+        $this->announceCommandResult($result);
+        Flash::success('Vrácená změna byla provedena znovu.');
+
+        return $this->commandRefresh($page);
     }
 
     protected function allowedSectionTypes(): array
@@ -667,6 +896,83 @@ class BuilderPages extends Controller
         }
 
         return BuilderPage::withoutGlobalScopes()->findOrFail($id);
+    }
+
+    private function commandRelationContext(): array
+    {
+        $page = $this->pageForRequest();
+        $field = (string) request()->input('_relation_field');
+        if (!in_array($field, ['sections', 'items'], true)) {
+            throw new \ApplicationException('Neplatná Page Builder relace.');
+        }
+        $relation = $this->asExtension('RelationController');
+        $relation->initRelation($page, $field);
+        $widget = $relation->relationGetManageFormWidget();
+        if (!$widget) {
+            throw new \ApplicationException('Editor relačního záznamu se nepodařilo inicializovat.');
+        }
+
+        return [$page, $field, $widget];
+    }
+
+    private function relationItemSection(): Section
+    {
+        $extra = json_decode((string) request()->input('_relation_extra_config'), true);
+        $sectionId = (int) data_get($extra, 'manageIds.sections', 0);
+
+        return Section::findOrFail($sectionId);
+    }
+
+    private function normalizeRelationSaveData(array $data): array
+    {
+        foreach (['slider' => 'slider_id', 'faq_group' => 'faq_group_id', 'gallery' => 'gallery_id'] as $relation => $foreignKey) {
+            if (!array_key_exists($relation, $data)) {
+                continue;
+            }
+            $value = $data[$relation];
+            $data[$foreignKey] = is_object($value) && method_exists($value, 'getKey') ? $value->getKey() : ($value ?: null);
+            unset($data[$relation]);
+        }
+
+        return $data;
+    }
+
+    private function expectedDraftVersion(): int
+    {
+        if (!request()->has('expected_draft_version')) {
+            throw new \ApplicationException('Chybí očekávaná verze konceptu. Obnovte editor a akci zopakujte.');
+        }
+
+        return (int) request()->input('expected_draft_version');
+    }
+
+    private function runPageCommand(BuilderPage $page, string $name, array $payload = [])
+    {
+        return app(PageCommandService::class)->execute(new PageCommand(
+            $name,
+            $page->id,
+            $this->expectedDraftVersion(),
+            $payload,
+        ));
+    }
+
+    private function announceCommandResult($result): void
+    {
+        $history = app(PageCommandHistory::class);
+        $this->dispatchBrowserEventAsync('hucr:draft-version', [
+            'pageId' => $result->pageId,
+            'draftVersion' => $result->draftVersion,
+            'hasDraft' => true,
+            'canUndo' => $history->canUndo($result->pageId),
+            'canRedo' => $history->canRedo($result->pageId),
+        ]);
+    }
+
+    private function commandRefresh(BuilderPage $page): array
+    {
+        $this->asExtension('RelationController')->initRelation($page, 'sections');
+
+        return $this->asExtension('RelationController')->relationRefresh('sections');
     }
 
     private function assertWritablePage(BuilderPage $page): void
