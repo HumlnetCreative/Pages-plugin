@@ -34,3 +34,46 @@
     border-radius: 4px;
     white-space: normal;
 }
+.hucr-revision-status {
+    align-items: center;
+    background: #eaf4ff;
+    border-left: 4px solid #2f80ed;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin: 0 0 1rem;
+    padding: .8rem 1rem;
+}
+
+.hucr-revision-status--readonly {
+    background: #fff5db;
+    border-left-color: #d99b18;
+}
+
+.hucr-revision-status strong,
+.hucr-revision-status span {
+    display: block;
+}
+
+.hucr-revision-status__state small {
+    color: #667085;
+    display: block;
+    margin-top: .25rem;
+}
+
+.hucr-revision-status__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+.hucr-revision-editor__fields[disabled] {
+    opacity: .72;
+}
+
+@media (max-width: 767px) {
+    .hucr-revision-status {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

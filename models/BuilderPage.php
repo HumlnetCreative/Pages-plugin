@@ -10,6 +10,8 @@ use Cms\Classes\Page as CmsPage;
 use Cms\Classes\Theme;
 use Cms\Classes\Router as CmsRouter;
 use Url;
+use HumlnetCreative\Pages\Services\DraftStateService;
+use HumlnetCreative\Pages\Services\PageMutationGuard;
 
 class BuilderPage extends Model
 {
@@ -21,8 +23,10 @@ class BuilderPage extends Model
     public $table = 'humlnetcreative_pages_builder_pages';
     public $propagatable = [];
     protected $guarded = [];
-    protected $dates = ['deleted_at'];
+    protected $dates = ['deleted_at', 'draft_started_at', 'published_at'];
     protected $jsonable = ['style'];
+    protected array $revisionAuditChanges = [];
+    protected bool $revisionWasNew = false;
     public $rules = [
         'title' => 'required|max:160',
         'slug' => ['max:160', 'regex:/^(?:[a-z0-9]+(?:-[a-z0-9]+)*)?$/i'],
@@ -30,6 +34,8 @@ class BuilderPage extends Model
 
     public function beforeSave()
     {
+        $this->revisionWasNew = !$this->exists;
+        app(PageMutationGuard::class)->assertWritable($this);
         if (!$this->uuid) {
             $this->uuid = (string) Str::uuid();
         }
@@ -47,6 +53,15 @@ class BuilderPage extends Model
             throw new \ValidationException(['slug' => 'Tato cesta je rezervovaná pro explicitní routu webu.']);
         }
         $this->assertFullslugIsUnique();
+
+        foreach (['title', 'slug', 'fullslug', 'parent_id', 'is_home', 'is_published', 'sort_order', 'style', 'meta_title', 'meta_description'] as $attribute) {
+            if ($this->isDirty($attribute)) {
+                $this->revisionAuditChanges[$attribute] = [
+                    'from' => $this->getOriginal($attribute),
+                    'to' => $this->getAttribute($attribute),
+                ];
+            }
+        }
     }
 
     public function afterSave()
@@ -55,10 +70,24 @@ class BuilderPage extends Model
             $child->fullslug = $child->buildFullslug();
             $child->save();
         }
+        if ($this->revisionWasNew || $this->revisionAuditChanges) {
+            app(DraftStateService::class)->touch(
+                (int) $this->id,
+                $this->revisionWasNew ? 'draft.created' : 'page.changed',
+                $this,
+                ['changes' => $this->revisionAuditChanges],
+            );
+        }
+        $this->revisionWasNew = false;
+        $this->revisionAuditChanges = [];
     }
 
     public $hasMany = [
         'sections' => [Section::class, 'key' => 'page_id', 'order' => 'sort_order'],
+        'revisions' => [PageRevision::class, 'key' => 'page_id', 'order' => 'version desc'],
+    ];
+    public $belongsTo = [
+        'published_revision' => [PageRevision::class, 'key' => 'published_revision_id'],
     ];
 
     /** Supplies Builder pages and compatible CMS templates to Page Finder. */
@@ -102,7 +131,7 @@ class BuilderPage extends Model
         }
 
         $page = static::find($item->reference);
-        if (!$page || !$page->is_published) {
+        if (!$page || !$page->published_revision_id || !$page->published_is_published) {
             return null;
         }
 
@@ -116,28 +145,33 @@ class BuilderPage extends Model
         return [
             'url' => $pageUrl,
             'isActive' => mb_strtolower($pageUrl) === mb_strtolower($url),
-            'mtime' => $page->updated_at,
+            'mtime' => $page->published_at,
         ];
     }
 
     protected static function listPageFinderOptions(): array
     {
-        $pages = static::where('is_published', true)->orderBy('sort_order')->getNested();
+        $pages = static::where('published_is_published', true)
+            ->whereNotNull('published_revision_id')
+            ->with('published_revision')
+            ->orderBy('published_sort_order')
+            ->get();
+        $byParent = $pages->groupBy(fn(self $page) => (int) ($page->published_parent_id ?: 0));
 
-        $iterator = function($nodes) use (&$iterator): array {
+        $iterator = function(int $parentId) use (&$iterator, $byParent): array {
             $result = [];
-
-            foreach ($nodes as $page) {
-                $children = $iterator($page->children);
+            foreach ($byParent->get($parentId, collect()) as $page) {
+                $children = $iterator((int) $page->id);
+                $publishedTitle = (string) data_get($page->published_revision?->snapshot, 'page.title', $page->title);
                 $result[$page->getKey()] = $children
-                    ? ['title' => $page->title, 'items' => $children]
-                    : $page->title;
+                    ? ['title' => $publishedTitle, 'items' => $children]
+                    : $publishedTitle;
             }
 
             return $result;
         };
 
-        return $iterator($pages);
+        return $iterator(0);
     }
 
     protected static function getPageFinderUrl(string $pageCode, self $page, Theme $theme): ?string
@@ -152,7 +186,7 @@ class BuilderPage extends Model
             return null;
         }
 
-        return CmsPage::url($cmsPage->getBaseFileName(), [$matches[1] => $page->fullslug]);
+        return CmsPage::url($cmsPage->getBaseFileName(), [$matches[1] => $page->published_fullslug]);
     }
 
     protected function buildFullslug(): string

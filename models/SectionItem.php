@@ -9,6 +9,8 @@ use Cms\Classes\Theme;
 use October\Rain\Database\Model;
 use October\Rain\Database\Traits\SoftDelete;
 use October\Rain\Database\Traits\Sortable;
+use HumlnetCreative\Pages\Services\DraftStateService;
+use HumlnetCreative\Pages\Services\PageMutationGuard;
 
 class SectionItem extends Model
 {
@@ -19,13 +21,16 @@ class SectionItem extends Model
     protected $guarded = [];
     protected $dates = ['deleted_at'];
     protected $jsonable = ['style', 'content'];
+    protected bool $revisionWasNew = false;
     public $belongsTo = ['section' => [Section::class, 'key' => 'section_id']];
     public $morphMany = ['media' => [MediaUse::class, 'name' => 'owner', 'order' => 'slot']];
 
     public function beforeSave()
     {
+        $this->revisionWasNew = !$this->exists;
         $this->uuid ??= (string) Str::uuid();
         $section = $this->section;
+        app(PageMutationGuard::class)->assertWritable($section?->page);
         if ($section && SectionRegistry::instance()->has($section->type)) {
             if (!SectionRegistry::instance()->itemsSupported($section->type)) {
                 throw new \ValidationException(['section' => 'Tento typ sekce nepodporuje samostatné položky.']);
@@ -43,6 +48,30 @@ class SectionItem extends Model
                     Flash::warning(implode(' ', $issues));
                 }
             }
+        }
+    }
+
+    public function afterSave()
+    {
+        if ($this->section?->page_id) {
+            app(DraftStateService::class)->touch(
+                (int) $this->section->page_id,
+                $this->revisionWasNew ? 'section_item.added' : 'section_item.changed',
+                $this,
+            );
+        }
+        $this->revisionWasNew = false;
+    }
+
+    public function beforeDelete()
+    {
+        app(PageMutationGuard::class)->assertWritable($this->section?->page);
+    }
+
+    public function afterDelete()
+    {
+        if ($this->section?->page_id) {
+            app(DraftStateService::class)->touch((int) $this->section->page_id, 'section_item.deleted', $this);
         }
     }
 

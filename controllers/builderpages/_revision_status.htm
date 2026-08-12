@@ -1,0 +1,74 @@
+<?php
+    $published = (bool) $builderPage->published_revision_id;
+    $draft = (bool) $builderPage->has_draft;
+    $owner = $pageLockState?->lock?->user;
+?>
+<div class="hucr-revision-status <?= $pageReadOnly ? 'hucr-revision-status--readonly' : '' ?>" data-hucr-revision-status data-has-published="<?= $published ? 'true' : 'false' ?>">
+    <div class="hucr-revision-status__state">
+        <strong data-hucr-draft-title><?= !$published ? 'Nový koncept' : ($draft ? 'Nepublikovaný koncept' : 'Publikováno') ?></strong>
+        <span
+            data-hucr-public-status
+            data-published-description="<?= $published ? e('Veřejný web zobrazuje verzi '.((int) $builderPage->published_revision?->version).', publikovanou '.($builderPage->published_at?->format('d. m. Y H:i') ?: 'v neznámém čase').'.') : 'Veřejná URL do první publikace vrací 404.' ?>">
+            <?php if (!$published): ?>Veřejná URL do první publikace vrací 404.
+            <?php elseif ($draft): ?>
+                Veřejný web zobrazuje verzi <?= (int) $builderPage->published_revision?->version ?>,
+                publikovanou <?= e($builderPage->published_at?->format('d. m. Y H:i') ?: 'v neznámém čase') ?>.
+                Koncept obsahuje nepublikované změny.
+            <?php else: ?>
+                Veřejný web zobrazuje verzi <?= (int) $builderPage->published_revision?->version ?>,
+                publikovanou <?= e($builderPage->published_at?->format('d. m. Y H:i') ?: 'v neznámém čase') ?>.
+                Pracovní kopie této verzi odpovídá.
+            <?php endif ?>
+        </span>
+        <?php $savedStatus = $draftSourceVersion
+            ? 'Koncept obnovený z verze '.$draftSourceVersion.' je uložený. Nejde o novou publikovanou verzi.'
+            : ($draft ? 'Koncept je uložený.' : ''); ?>
+        <small data-hucr-save-status data-saved-label="<?= e($savedStatus ?: 'Koncept je uložený.') ?>"><?= e($savedStatus) ?></small>
+    </div>
+    <div class="hucr-revision-status__actions">
+        <?php if (!$pageReadOnly): ?>
+            <button type="submit" data-hucr-save-primary data-request="onSave" data-request-data="redirect:0" data-hotkey="ctrl+s, cmd+s" data-load-indicator="Ukládám koncept…" class="btn btn-primary btn-sm">Uložit koncept</button>
+            <button type="button" data-hucr-save-close data-request="onSave" data-request-data="close:1" data-hotkey="ctrl+shift+s, cmd+shift+s" data-load-indicator="Ukládám koncept…" class="btn btn-default btn-sm">Uložit a zavřít</button>
+            <?php if (BackendAuth::userHasPermission('humlnetcreative.pages.draft.publish')): ?>
+                <button type="button" data-hucr-requires-draft <?= $draft ? '' : 'hidden' ?> data-request="onSaveAndPublish" data-request-data="page_id: <?= (int) $builderPage->id ?>" data-load-indicator="Publikuji…" class="btn btn-success btn-sm" data-request-confirm="Uložit koncept a atomicky jej zveřejnit jako novou verzi?">Uložit a publikovat</button>
+            <?php endif ?>
+        <?php endif ?>
+        <button type="button" class="btn btn-default btn-sm" data-control="popup" data-handler="onOpenHistory" data-request-data="page_id: <?= (int) $builderPage->id ?>" data-size="large">Historie</button>
+        <?php if ($published): ?>
+            <a class="btn btn-default btn-sm" href="<?= e(Url::to($builderPage->published_fullslug)) ?>" target="_blank" rel="noopener">Otevřít publikovanou stránku</a>
+        <?php endif ?>
+        <?php if (!$pageReadOnly): ?>
+            <a data-hucr-requires-draft <?= $draft ? '' : 'hidden' ?> class="btn btn-default btn-sm" href="<?= e(Url::to($builderPage->fullslug).'?builder_preview=draft') ?>" target="_blank" rel="noopener">Náhled konceptu</a>
+        <?php endif ?>
+        <?php if (!$pageReadOnly && $published && BackendAuth::userHasPermission('humlnetcreative.pages.draft.discard')): ?>
+            <button
+                type="button"
+                class="btn btn-danger btn-sm"
+                data-hucr-requires-draft
+                <?= $draft ? '' : 'hidden' ?>
+                data-request="onDiscardDraft"
+                data-request-data="page_id: <?= (int) $builderPage->id ?>"
+                data-load-indicator="Obnovuji publikovanou verzi…"
+                data-request-confirm="Zahodit celý koncept a přesně obnovit poslední publikovanou verzi?">
+                <i class="icon-undo" aria-hidden="true"></i> Zahodit koncept
+            </button>
+        <?php endif ?>
+        <?php if (!$pageReadOnly && !$published): ?>
+            <button type="button" class="btn btn-danger btn-sm" title="Odstranit nepublikovanou stránku" data-request="onDelete" data-request-data="page_id: <?= (int) $builderPage->id ?>" data-load-indicator="Odstraňuji…" data-request-confirm="Opravdu chcete odstranit tuto dosud nepublikovanou stránku?"><i class="icon-trash-o" aria-hidden="true"></i> Odstranit stránku</button>
+        <?php endif ?>
+    </div>
+</div>
+<?php if ($pageReadOnly): ?>
+    <div class="callout callout-warning">
+        <div class="content">
+            <h4>Režim pouze pro čtení</h4>
+            <p>
+                <?php if ($owner): ?>Stránku upravuje <?= e($owner->full_name ?: $owner->login) ?>.
+                <?php else: ?>Nemáte oprávnění upravovat koncept stránky.<?php endif ?>
+            </p>
+            <?php if ($owner && BackendAuth::userHasPermission('humlnetcreative.pages.lock.takeover')): ?>
+                <button type="button" class="btn btn-warning" data-request="onTakeoverLock" data-request-data="page_id: <?= (int) $builderPage->id ?>" data-load-indicator="Přebírám zámek…" data-request-confirm="Převzít zámek? Původní editor už nebude moci ukládat.">Převzít zámek</button>
+            <?php endif ?>
+        </div>
+    </div>
+<?php endif ?>

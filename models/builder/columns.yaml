@@ -4,9 +4,20 @@ columns:
         searchable: true
     fullslug:
         label: Cesta
-    is_published:
-        label: Viditelná
-        type: switch
+    revision_status:
+        label: Stav
+        type: partial
+        path: $/humlnetcreative/pages/models/builder/_column_revision_status.php
+        sortable: false
+        clickable: false
     updated_at:
         label: Upraveno
         type: datetime
+    actions:
+        label: Akce
+        type: partial
+        path: $/humlnetcreative/pages/models/builder/_column_actions.php
+        sortable: false
+        searchable: false
+        clickable: false
+        width: 190px

@@ -6,16 +6,24 @@
 <?php Block::endPut() ?>
 
 <?php if (!$this->fatalError): ?>
-    <?= Form::open(['class' => 'layout']) ?>
-        <div class="layout-row"><?= $this->formRender() ?></div>
+    <?= Form::open(['class' => 'layout', 'data-hucr-revision-editor' => '', 'data-page-id' => (int) $builderPage->id]) ?>
+        <?= $this->makePartial('revision_status', [
+            'builderPage' => $builderPage,
+            'pageLockState' => $pageLockState,
+            'pageReadOnly' => $pageReadOnly,
+            'draftSourceVersion' => $draftSourceVersion,
+        ]) ?>
+        <fieldset class="layout-row hucr-revision-editor__fields" <?= $pageReadOnly ? 'disabled' : '' ?>>
+            <?= $this->formRender() ?>
+        </fieldset>
         <div class="form-buttons">
             <div class="loading-indicator-container">
-                <button type="submit" data-request="onSave" data-request-data="redirect:0" data-hotkey="ctrl+s, cmd+s" data-load-indicator="Ukládám…" class="btn btn-primary">Uložit</button>
-                <button type="button" data-request="onSave" data-request-data="close:1" data-hotkey="ctrl+enter, cmd+enter" data-load-indicator="Ukládám…" class="btn btn-default">Uložit a zavřít</button>
-                <button type="button" class="oc-icon-trash-o btn-icon danger pull-right" title="Odstranit stránku" data-request="onDelete" data-load-indicator="Odstraňuji…" data-request-confirm="Opravdu chcete tuto stránku odstranit?"></button>
-                <span class="btn-text">nebo <a href="<?= Backend::url('humlnetcreative/pages/builderpages') ?>">zrušit</a></span>
+                <a href="#" data-request="onReleaseLock" data-request-data="page_id: <?= (int) $builderPage->id ?>" data-load-indicator="Zavírám editor…">Zavřít editor</a>
             </div>
         </div>
+        <?php if (!$pageReadOnly): ?>
+            <button type="button" hidden data-hucr-heartbeat data-request="onHeartbeat" data-request-data="page_id: <?= (int) $builderPage->id ?>"></button>
+        <?php endif ?>
     <?= Form::close() ?>
 <?php else: ?>
     <p class="flash-message static error"><?= e(trans($this->fatalError)) ?></p>

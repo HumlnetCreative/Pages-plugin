@@ -4,9 +4,15 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use October\Rain\Database\Model;
 use HumlnetCreative\Pages\Services\CompliancePolicy;
+use HumlnetCreative\Pages\Models\Section;
+use HumlnetCreative\Pages\Models\SectionItem;
+use HumlnetCreative\Pages\Services\DraftStateService;
+use HumlnetCreative\Pages\Services\MediaReferenceService;
+use HumlnetCreative\Pages\Services\PageMutationGuard;
 
 class MediaUse extends Model
 {
+    protected ?int $draftPageId = null;
     public $table = 'humlnetcreative_pages_media_uses';
     protected $guarded = [];
     protected $jsonable = ['crop', 'variants'];
@@ -15,6 +21,8 @@ class MediaUse extends Model
 
     public function beforeSave()
     {
+        $this->draftPageId = $this->resolveDraftPageId();
+        app(PageMutationGuard::class)->assertWritable($this->resolveBuilderPage());
         $this->uuid ??= (string) Str::uuid();
         if ($this->is_decorative) {
             $this->alt_text = null;
@@ -22,6 +30,19 @@ class MediaUse extends Model
         elseif (!$this->alt_text && CompliancePolicy::shouldBlock()) {
             throw new \ValidationException(['alt_text' => 'Vyplňte alternativní text nebo označte obrázek jako dekorativní.']);
         }
+    }
+
+    public function afterSave()
+    {
+        if ($this->draftPageId) {
+            app(DraftStateService::class)->touch($this->draftPageId, 'media.changed', $this);
+        }
+    }
+
+    public function beforeDelete()
+    {
+        $this->draftPageId = $this->resolveDraftPageId();
+        app(PageMutationGuard::class)->assertWritable($this->resolveBuilderPage());
     }
 
     /**
@@ -65,12 +86,27 @@ class MediaUse extends Model
     /** Removes generated public variants and an unshared private master. */
     public function afterDelete()
     {
-        $asset = $this->asset;
-        Storage::disk('media')->deleteDirectory('pages-variants/'.$asset->uuid.'/'.$this->uuid);
-
-        if (!self::where('media_asset_id', $this->media_asset_id)->exists()) {
-            Storage::disk($asset->disk)->delete($asset->path);
-            $asset->delete();
+        app(MediaReferenceService::class)->removeUseFilesWhenOrphaned($this);
+        if ($this->draftPageId) {
+            app(DraftStateService::class)->touch($this->draftPageId, 'media.deleted', $this);
         }
+    }
+
+    private function resolveBuilderPage(): ?BuilderPage
+    {
+        $owner = $this->owner;
+        if ($owner instanceof Section) {
+            return $owner->page;
+        }
+        if ($owner instanceof SectionItem) {
+            return $owner->section?->page;
+        }
+
+        return null;
+    }
+
+    private function resolveDraftPageId(): ?int
+    {
+        return $this->resolveBuilderPage()?->id;
     }
 }

@@ -92,6 +92,7 @@ class Plugin extends PluginBase
                 $controller->addJs($assetUrl('js/backend-slider-editor.js'));
                 $controller->addJs($assetUrl('js/backend-media-crop.js'));
                 $controller->addJs($assetUrl('js/backend-media-editor.js'));
+                $controller->addJs($assetUrl('js/backend-revision-editor.js'));
                 $controller->addCss($assetUrl('css/backend-page-builder.css'));
                 $controller->addCss($assetUrl('css/backend-media-crop.css'));
                 $controller->addCss($assetUrl('css/backend-media-editor.css'));
@@ -224,6 +225,11 @@ class Plugin extends PluginBase
         $permissions['humlnetcreative.pages.builder'] = ['label' => 'Nový Page Builder', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.builder.import'] = ['label' => 'Import kostry webu', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.builder.trash'] = ['label' => 'Obnova obsahu z koše', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.draft.edit'] = ['label' => 'Koncept: upravovat', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.draft.publish'] = ['label' => 'Koncept: publikovat', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.draft.discard'] = ['label' => 'Koncept: zahodit změny', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.history.restore'] = ['label' => 'Historie: obnovit do konceptu', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.lock.takeover'] = ['label' => 'Zámek stránky: převzít', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.editor.html'] = ['label' => 'Rich editor: HTML zdroj a tabulky', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.schemes.manage'] = ['label' => 'Vývojář: definice barevných schémat theme', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.slider.manage'] = ['label' => 'Prezentace: správa Sliderů a položek', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];

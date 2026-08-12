@@ -181,3 +181,10 @@ v3.3.0:
     - 'Connect reusable Gallery plugin galleries to Page Builder gallery sections'
     - add_gallery_builder_integration.php
     - extend_client_role_gallery_permissions.php
+v4.0.0:
+    - 'Add page revisions, published projections, media references, edit locks and audit log'
+    - create_page_revision_tables.php
+v4.0.1:
+    - 'Create initial published snapshots and extend client revision permissions'
+    - seed_initial_page_revisions.php
+    - extend_client_role_revision_permissions.php

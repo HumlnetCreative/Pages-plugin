@@ -10,9 +10,15 @@ use HumlnetCreative\Pages\Models\BuilderPage;
 use HumlnetCreative\Pages\Models\Section;
 use HumlnetCreative\Pages\Models\SectionItem;
 use HumlnetCreative\Pages\Models\MediaUse;
+use HumlnetCreative\Pages\Models\PageAuditLog;
+use HumlnetCreative\Pages\Models\PageRevision;
 use HumlnetCreative\Pages\Models\SliderMediaContext;
+use HumlnetCreative\Pages\Services\EditorSessionService;
 use HumlnetCreative\Pages\Services\MediaService;
+use HumlnetCreative\Pages\Services\PageEditLockService;
+use HumlnetCreative\Pages\Services\PagePublicationService;
 use HumlnetCreative\Pages\Services\SectionRegistry;
+use HumlnetCreative\Pages\Services\WorkingCopyRestorer;
 use Backend\Facades\BackendAuth;
 use Illuminate\Support\Facades\Storage;
 use Flash;
@@ -30,6 +36,169 @@ class BuilderPages extends Controller
     {
         parent::__construct();
         BackendMenu::setContext('HumlnetCreative.Pages', 'main-menu-item', 'side-menu-builder');
+    }
+
+    /** Opens the working copy and acquires its single-editor lock. */
+    public function update($recordId = null, $context = null)
+    {
+        $result = $this->asExtension('FormController')->update($recordId, $context);
+        if ($this->fatalError) {
+            return $result;
+        }
+
+        $page = $this->formGetModel();
+        $user = BackendAuth::getUser();
+        $canEdit = $user && BackendAuth::userHasPermission('humlnetcreative.pages.draft.edit');
+        $state = $canEdit
+            ? app(PageEditLockService::class)->acquire($page, $user, app(EditorSessionService::class)->id())
+            : null;
+
+        $this->vars['pageLockState'] = $state;
+        $this->vars['pageReadOnly'] = !$state?->writable;
+        $this->vars['builderPage'] = $page;
+        $latestLifecycleAudit = $page->has_draft
+            ? PageAuditLog::where('page_id', $page->id)
+                ->whereIn('action', ['history.restored', 'draft.published', 'draft.discarded'])
+                ->orderByDesc('id')
+                ->first()
+            : null;
+        $this->vars['draftSourceVersion'] = $latestLifecycleAudit?->action === 'history.restored'
+            ? (int) data_get($latestLifecycleAudit->payload, 'version')
+            : null;
+
+        return $result;
+    }
+
+    public function onSaveAndPublish($recordId = null)
+    {
+        $this->assertPermission('humlnetcreative.pages.draft.publish', 'Nemáte oprávnění publikovat koncept stránky.');
+        $page = $this->pageForRequest($recordId);
+        $this->assertWritablePage($page);
+
+        // Save the form working copy first. Any validation failure prevents publication.
+        $this->asExtension('FormController')->update_onSave($page->id);
+        $page = BuilderPage::withoutGlobalScopes()->findOrFail($page->id);
+        app(PagePublicationService::class)->publish($page, BackendAuth::getUser()?->id);
+        Flash::success('Koncept byl uložen a publikován jako nová verze.');
+
+        return Backend::redirect('humlnetcreative/pages/builderpages/update/'.$page->id);
+    }
+
+    /** Releases the soft lock when the standard Save & close action ends the editor. */
+    public function formAfterSave($model): void
+    {
+        if (!$model instanceof BuilderPage || !request()->boolean('close') || !BackendAuth::getUser()) {
+            return;
+        }
+        app(PageEditLockService::class)->release(
+            $model,
+            BackendAuth::getUser(),
+            app(EditorSessionService::class)->id(),
+        );
+    }
+
+    public function onDiscardDraft($recordId = null)
+    {
+        $this->assertPermission('humlnetcreative.pages.draft.discard', 'Nemáte oprávnění zahodit koncept stránky.');
+        $page = $this->pageForRequest($recordId);
+        $this->assertWritablePage($page);
+        app(WorkingCopyRestorer::class)->discard($page);
+        Flash::success('Koncept byl zahozen a pracovní kopie obnovena z publikované verze.');
+
+        return Backend::redirect('humlnetcreative/pages/builderpages/update/'.$page->id);
+    }
+
+    public function onOpenHistory($recordId = null)
+    {
+        $page = $this->pageForRequest($recordId);
+
+        return $this->makePartial('history', [
+            'builderPage' => $page,
+            'revisions' => $page->revisions()->with('publisher')->limit(PagePublicationService::RETAINED_REVISIONS)->get(),
+            'canRestore' => BackendAuth::userHasPermission('humlnetcreative.pages.history.restore'),
+        ]);
+    }
+
+    public function onRestoreRevision($recordId = null)
+    {
+        $this->assertPermission('humlnetcreative.pages.history.restore', 'Nemáte oprávnění obnovovat historii stránky.');
+        $page = $this->pageForRequest($recordId);
+        $this->assertWritablePage($page);
+        $revision = PageRevision::where('page_id', $page->id)->findOrFail((int) request()->input('revision_id'));
+        app(WorkingCopyRestorer::class)->restoreRevision($revision, true);
+        Flash::success("Verze {$revision->version} byla obnovena do konceptu. Veřejný web se nezměnil.");
+
+        return Backend::redirect('humlnetcreative/pages/builderpages/update/'.$page->id);
+    }
+
+    public function onHeartbeat($recordId = null): array
+    {
+        $page = $this->pageForRequest($recordId);
+        $state = app(PageEditLockService::class)->heartbeat(
+            $page,
+            BackendAuth::getUser(),
+            app(EditorSessionService::class)->id(),
+        );
+        if (!$state->writable) {
+            throw new \ApplicationException('Zámek stránky už patří jinému editoru. Obnovte stránku; další zápis je zablokovaný.');
+        }
+
+        return [];
+    }
+
+    public function onTakeoverLock($recordId = null)
+    {
+        $this->assertPermission('humlnetcreative.pages.lock.takeover', 'Nemáte oprávnění převzít zámek stránky.');
+        $page = $this->pageForRequest($recordId);
+        app(PageEditLockService::class)->takeover(
+            $page,
+            BackendAuth::getUser(),
+            app(EditorSessionService::class)->id(),
+        );
+        Flash::success('Zámek stránky byl převzat.');
+
+        return Backend::redirect('humlnetcreative/pages/builderpages/update/'.$page->id);
+    }
+
+    public function onReleaseLock($recordId = null)
+    {
+        $page = $this->pageForRequest($recordId);
+        app(PageEditLockService::class)->release(
+            $page,
+            BackendAuth::getUser(),
+            app(EditorSessionService::class)->id(),
+        );
+
+        return Backend::redirect('humlnetcreative/pages/builderpages');
+    }
+
+    /** Published deletion is a later explicit URL proposal, never an immediate form action. */
+    public function onDelete($recordId = null)
+    {
+        $page = $this->pageForRequest($recordId);
+        $this->assertWritablePage($page);
+        if ($page->published_revision_id) {
+            throw new \ApplicationException('Publikovanou stránku nelze odstranit přímo. Návrh odstranění a volba 410/301 budou součástí etapy URL workflow.');
+        }
+
+        app(PageEditLockService::class)->release($page, BackendAuth::getUser(), app(EditorSessionService::class)->id());
+
+        return $this->asExtension('FormController')->update_onDelete($page->id);
+    }
+
+    public function onDeleteUnpublishedFromList(): array
+    {
+        $this->assertPermission('humlnetcreative.pages.draft.edit', 'Nemáte oprávnění odstranit nepublikovanou stránku.');
+        $page = $this->pageForRequest();
+        if ($page->published_revision_id) {
+            throw new \ApplicationException('Publikovanou stránku nelze odstranit přímo. Její řízené odstranění s volbou 410/301 patří do etapy URL workflow.');
+        }
+
+        $this->assertWritablePage($page);
+        app(WorkingCopyRestorer::class)->deleteUnpublished($page);
+        Flash::success('Nepublikovaná stránka byla přesunuta do koše.');
+
+        return $this->listRefresh();
     }
 
     public function relationExtendViewListWidget($widget, $field, $model)
@@ -147,6 +316,7 @@ class BuilderPages extends Controller
         $sliderId = (int) request()->input('slider_id');
         $this->vars['editorUrl'] = Backend::url('tailor/entries/slider-slider/'.($sliderId ?: 'create'));
         $this->vars['editorTitle'] = $sliderId ? 'Upravit Slider' : 'Vytvořit Slider';
+        $this->vars['sharedUsages'] = $sliderId ? $this->sharedSourceUsages('slider_id', $sliderId) : collect();
         return $this->makePartial('slider_editor');
     }
 
@@ -164,6 +334,7 @@ class BuilderPages extends Controller
 
         $this->vars['editorUrl'] = Backend::url('tailor/entries/'.$blueprint->handleSlug.'/'.($groupId ?: 'create'));
         $this->vars['editorTitle'] = $groupId ? 'Upravit FAQ skupinu' : 'Vytvořit FAQ skupinu';
+        $this->vars['sharedUsages'] = $groupId ? $this->sharedSourceUsages('faq_group_id', $groupId) : collect();
 
         return $this->makePartial('slider_editor');
     }
@@ -177,6 +348,7 @@ class BuilderPages extends Controller
         $galleryId = (int) request()->input('gallery_id');
         $this->vars['editorUrl'] = Backend::url('lzaplata/gallery/galleries/'.($galleryId ? 'update/'.$galleryId : 'create'));
         $this->vars['editorTitle'] = $galleryId ? 'Upravit Galerii' : 'Vytvořit Galerii';
+        $this->vars['sharedUsages'] = $galleryId ? $this->sharedSourceUsages('gallery_id', $galleryId) : collect();
 
         return $this->makePartial('slider_editor');
     }
@@ -485,5 +657,41 @@ class BuilderPages extends Controller
         return [
             '#hucr-media-editor-'.$kind.'-'.$owner->id => $this->makePartial($partial, ['model' => $owner]),
         ];
+    }
+
+    private function pageForRequest($recordId = null): BuilderPage
+    {
+        $id = (int) ($recordId ?: request()->input('page_id') ?: request()->route('recordId'));
+        if (!$id && isset($this->params[0])) {
+            $id = (int) $this->params[0];
+        }
+
+        return BuilderPage::withoutGlobalScopes()->findOrFail($id);
+    }
+
+    private function assertWritablePage(BuilderPage $page): void
+    {
+        $this->assertPermission('humlnetcreative.pages.draft.edit', 'Nemáte oprávnění upravovat koncept stránky.');
+        app(PageEditLockService::class)->assertWritable(
+            $page,
+            BackendAuth::getUser(),
+            app(EditorSessionService::class)->id(),
+        );
+    }
+
+    private function assertPermission(string $permission, string $message): void
+    {
+        if (!BackendAuth::userHasPermission($permission)) {
+            throw new \ApplicationException($message);
+        }
+    }
+
+    private function sharedSourceUsages(string $foreignKey, int $sourceId)
+    {
+        return Section::with('page')
+            ->where($foreignKey, $sourceId)
+            ->orderBy('page_id')
+            ->orderBy('sort_order')
+            ->get();
     }
 }

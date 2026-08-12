@@ -9,6 +9,8 @@ use October\Rain\Database\Model;
 use October\Rain\Database\Traits\SoftDelete;
 use October\Rain\Database\Traits\Sortable;
 use HumlnetCreative\Pages\Services\PresentationService;
+use HumlnetCreative\Pages\Services\DraftStateService;
+use HumlnetCreative\Pages\Services\PageMutationGuard;
 
 class Section extends Model
 {
@@ -19,6 +21,7 @@ class Section extends Model
     protected $guarded = [];
     protected $dates = ['deleted_at'];
     protected $jsonable = ['layout', 'style', 'content'];
+    protected bool $revisionWasNew = false;
     public $belongsTo = [
         'page' => [BuilderPage::class, 'key' => 'page_id'],
         'slider' => [SliderEntry::class, 'key' => 'slider_id'],
@@ -30,9 +33,11 @@ class Section extends Model
 
     public function beforeSave()
     {
+        $this->revisionWasNew = !$this->exists;
         if (!$this->uuid) {
             $this->uuid = (string) Str::uuid();
         }
+        app(PageMutationGuard::class)->assertWritable($this->page);
         if (!SectionRegistry::instance()->has($this->type)) {
             throw new \ValidationException(['type' => 'Neznámý typ sekce.']);
         }
@@ -42,6 +47,26 @@ class Section extends Model
         }
         $this->validateBuilderOptions();
         $this->applyComplianceIssues(CompliancePolicy::sectionIssues($this->type, $this->content ?: []));
+    }
+
+    public function afterSave()
+    {
+        app(DraftStateService::class)->touch(
+            (int) $this->page_id,
+            $this->revisionWasNew ? 'section.added' : 'section.changed',
+            $this,
+        );
+        $this->revisionWasNew = false;
+    }
+
+    public function beforeDelete()
+    {
+        app(PageMutationGuard::class)->assertWritable($this->page);
+    }
+
+    public function afterDelete()
+    {
+        app(DraftStateService::class)->touch((int) $this->page_id, 'section.deleted', $this);
     }
 
     public function getTypeOptions(): array

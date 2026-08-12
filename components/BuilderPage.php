@@ -2,8 +2,11 @@
 
 use Cms\Classes\ComponentBase;
 use HumlnetCreative\Pages\Models\BuilderPage as BuilderPageModel;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\View;
+use Backend\Facades\BackendAuth;
+use HumlnetCreative\Pages\Services\PagePublicationService;
 
 class BuilderPage extends ComponentBase
 {
@@ -23,6 +26,42 @@ class BuilderPage extends ComponentBase
     public function onRun()
     {
         $slug = trim((string) $this->property('value'), '/');
+        $preview = request()->query('builder_preview') === 'draft';
+        if ($preview) {
+            if (!BackendAuth::getUser() || !BackendAuth::userHasPermission('humlnetcreative.pages.draft.edit')) {
+                return $this->notFoundResponse();
+            }
+            $this->record = $this->loadWorkingCopy($slug);
+            $this->controller->setResponseHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+            $this->controller->setResponseHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+            $this->page['builderIsDraftPreview'] = true;
+        }
+        else {
+            $this->record = app(PagePublicationService::class)->findPublishedByPath($slug);
+        }
+        if (!$this->record) {
+            return $this->notFoundResponse();
+        }
+        $this->sections = $this->record->sections->sortBy('sort_order')->all();
+        $this->page['builderRecord'] = $this->record;
+        $this->page['builderSections'] = $this->sections;
+        $this->page['builderFaqSchemaJson'] = $this->buildFaqSchemaJson();
+    }
+
+    private function notFoundResponse()
+    {
+        $this->setStatusCode(404);
+
+        // A catch-all Builder route cannot call controller->run('404') when a theme has
+        // no custom 404 page: the router would select the same catch-all recursively.
+        return Response::make(View::make('cms::404'), 404, [
+            'X-Robots-Tag' => 'noindex, nofollow, noarchive',
+            'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
+        ]);
+    }
+
+    private function loadWorkingCopy(string $slug): ?BuilderPageModel
+    {
         $query = BuilderPageModel::with([
             'sections' => fn($query) => $query->where('is_published', true)->with([
                 'media.asset',
@@ -32,14 +71,9 @@ class BuilderPage extends ComponentBase
                 'items' => fn($items) => $items->where('is_published', true)->with('media.asset'),
             ]),
         ]);
-        $this->record = $slug === '' ? $query->where('is_home', true)->first() : $query->where('fullslug', $slug)->first();
-        if (!$this->record || !$this->record->is_published) {
-            throw new NotFoundHttpException();
-        }
-        $this->sections = $this->record->sections->sortBy('sort_order')->all();
-        $this->page['builderRecord'] = $this->record;
-        $this->page['builderSections'] = $this->sections;
-        $this->page['builderFaqSchemaJson'] = $this->buildFaqSchemaJson();
+        $record = $slug === '' ? $query->where('is_home', true)->first() : $query->where('fullslug', $slug)->first();
+
+        return $record;
     }
 
     protected function buildFaqSchemaJson(): ?string

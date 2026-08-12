@@ -1,0 +1,32 @@
+<div class="modal-header">
+    <h4 class="modal-title">Historie — <?= e($builderPage->title) ?></h4>
+    <button type="button" class="btn-close" data-dismiss="popup"></button>
+</div>
+<div class="modal-body">
+    <?php if ($revisions->isEmpty()): ?>
+        <p>Stránka zatím nemá žádnou publikovanou verzi.</p>
+    <?php else: ?>
+        <p>Obnova vždy vytvoří nový koncept. Veřejná stránka se změní až po další publikaci.</p>
+        <div class="control-list">
+            <table class="table data">
+                <thead><tr><th>Verze</th><th>Publikováno</th><th>Uživatel</th><th>Cesta</th><th></th></tr></thead>
+                <tbody>
+                    <?php foreach ($revisions as $revision): ?>
+                        <tr>
+                            <td><strong><?= (int) $revision->version ?></strong><?= (int) $builderPage->published_revision_id === (int) $revision->id ? ' · aktuální' : '' ?></td>
+                            <td><?= e($revision->created_at?->format('d. m. Y H:i')) ?></td>
+                            <td><?= e($revision->publisher?->full_name ?: $revision->publisher?->login ?: 'systém') ?></td>
+                            <td><code>/<?= e(data_get($revision->snapshot, 'page.fullslug')) ?></code></td>
+                            <td class="text-end">
+                                <?php if ($canRestore): ?>
+                                    <button type="button" class="btn btn-default btn-sm" data-request="onRestoreRevision" data-request-data="page_id: <?= (int) $builderPage->id ?>, revision_id: <?= (int) $revision->id ?>" data-load-indicator="Obnovuji…" data-request-confirm="Obnovit tuto verzi do konceptu?">Obnovit do konceptu</button>
+                                <?php endif ?>
+                            </td>
+                        </tr>
+                    <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif ?>
+</div>
+<div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="popup">Zavřít</button></div>

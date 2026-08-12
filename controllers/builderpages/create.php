@@ -10,8 +10,8 @@
         <div class="layout-row"><?= $this->formRender() ?></div>
         <div class="form-buttons">
             <div class="loading-indicator-container">
-                <button type="submit" data-request="onSave" data-hotkey="ctrl+s, cmd+s" data-load-indicator="Vytvářím…" class="btn btn-primary">Vytvořit</button>
-                <button type="button" data-request="onSave" data-request-data="close:1" data-hotkey="ctrl+enter, cmd+enter" data-load-indicator="Vytvářím…" class="btn btn-default">Vytvořit a zavřít</button>
+                <button type="submit" data-hucr-save-primary data-request="onSave" data-hotkey="ctrl+s, cmd+s" data-load-indicator="Vytvářím koncept…" class="btn btn-primary">Vytvořit koncept</button>
+                <button type="button" data-hucr-save-close data-request="onSave" data-request-data="close:1" data-hotkey="ctrl+shift+s, cmd+shift+s" data-load-indicator="Vytvářím koncept…" class="btn btn-default">Vytvořit a zavřít</button>
                 <span class="btn-text">nebo <a href="<?= Backend::url('humlnetcreative/pages/builderpages') ?>">zrušit</a></span>
             </div>
         </div>

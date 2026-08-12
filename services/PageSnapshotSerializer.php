@@ -34,7 +34,7 @@ final class PageSnapshotSerializer
                 'uuid' => (string) $page->uuid,
                 'site_id' => $this->nullableInt($page->site_id),
                 'site_root_id' => $this->nullableInt($page->site_root_id),
-                'parent' => $this->reference($page->parent),
+                'parent' => $this->reference($page->parent, $page->parent_id),
                 'title' => (string) $page->title,
                 'slug' => (string) $page->slug,
                 'fullslug' => (string) $page->fullslug,
@@ -65,9 +65,9 @@ final class PageSnapshotSerializer
             'uuid' => (string) $section->uuid,
             'type' => (string) $section->type,
             'shared' => [
-                'slider' => $this->reference($section->slider),
-                'faq_group' => $this->reference($section->faq_group),
-                'gallery' => $this->reference($section->gallery),
+                'slider' => $this->reference($section->slider, $section->slider_id),
+                'faq_group' => $this->reference($section->faq_group, $section->faq_group_id),
+                'gallery' => $this->reference($section->gallery, $section->gallery_id),
             ],
             'title' => $section->title,
             'is_published' => (bool) $section->is_published,
@@ -143,10 +143,10 @@ final class PageSnapshotSerializer
         ];
     }
 
-    private function reference(?Model $model): ?array
+    private function reference(?Model $model, mixed $fallbackId = null): ?array
     {
         if (!$model) {
-            return null;
+            return $fallbackId === null ? null : ['id' => $fallbackId];
         }
 
         $reference = ['id' => $model->getKey()];
