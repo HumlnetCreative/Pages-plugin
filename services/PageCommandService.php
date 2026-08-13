@@ -28,9 +28,11 @@ final class PageCommandService
         }
 
         $user = BackendAuth::getUser();
-        $result = DB::transaction(function() use ($command, $user): PageCommandResult {
+        $historyMeta = [];
+        $result = DB::transaction(function() use ($command, $user, &$historyMeta): PageCommandResult {
             $page = BuilderPage::withoutGlobalScopes()->lockForUpdate()->findOrFail($command->pageId);
             $this->assertContext($page, $command, $user);
+            $historyMeta = $this->historyMeta($page, $command, $user);
 
             [$data, $inverse] = DraftStateService::withoutTracking(
                 fn(): array => $this->dispatch($page, $command, $user),
@@ -55,7 +57,7 @@ final class PageCommandService
 
         if ($recordHistory && $result->inverse) {
             $redo = new PageCommand($command->name, $command->pageId, $result->draftVersion, $command->payload);
-            app(PageCommandHistory::class)->push($command->pageId, $result->inverse, $redo);
+            app(PageCommandHistory::class)->push($command->pageId, $result->inverse, $redo, $historyMeta);
         }
 
         return $result;
@@ -75,6 +77,7 @@ final class PageCommandService
             $history->pushRedo($pageId, [
                 'undo' => $entry['undo'],
                 'redo' => ($result->inverse ?: PageCommand::fromArray($entry['redo']))->toArray(),
+                'meta' => $entry['meta'] ?? [],
             ], $result->draftVersion);
 
             return $result;
@@ -103,6 +106,7 @@ final class PageCommandService
             $history->pushUndoEntry($pageId, [
                 'undo' => ($result->inverse ?: PageCommand::fromArray($entry['undo']))->toArray(),
                 'redo' => $entry['redo'],
+                'meta' => $entry['meta'] ?? [],
             ], $result->draftVersion);
 
             return $result;
@@ -115,6 +119,28 @@ final class PageCommandService
             $history->pushRedo($pageId, $entry);
             throw $exception;
         }
+    }
+
+    public function jump(int $pageId, int $expectedDraftVersion, int $targetPosition): ?PageCommandResult
+    {
+        $history = app(PageCommandHistory::class);
+        $timeline = $history->timeline($pageId);
+        if ($targetPosition < 0 || $targetPosition > $timeline['total']) {
+            throw new \ApplicationException('Vybraný bod historie už není dostupný.');
+        }
+
+        $version = $expectedDraftVersion;
+        $result = null;
+        while ($history->timeline($pageId)['position'] > $targetPosition) {
+            $result = $this->undo($pageId, $version);
+            $version = $result->draftVersion;
+        }
+        while ($history->timeline($pageId)['position'] < $targetPosition) {
+            $result = $this->redo($pageId, $version);
+            $version = $result->draftVersion;
+        }
+
+        return $result;
     }
 
     private function dispatch(BuilderPage $page, PageCommand $command, ?User $user): array
@@ -142,6 +168,49 @@ final class PageCommandService
             'item.duplicate' => $this->duplicateItem($page, $command->payload),
             default => throw new \InvalidArgumentException("Neznámý Page Builder příkaz {$command->name}."),
         };
+    }
+
+    private function historyMeta(BuilderPage $page, PageCommand $command, ?User $user): array
+    {
+        $section = null;
+        $item = null;
+        $uuid = (string) ($command->payload['uuid'] ?? '');
+        if (str_starts_with($command->name, 'section.') && $uuid !== '') {
+            $section = Section::withTrashed()->where('page_id', $page->id)->where('uuid', $uuid)->first();
+        }
+        elseif (str_starts_with($command->name, 'item.') && $uuid !== '') {
+            $item = SectionItem::withTrashed()->with('section')->where('uuid', $uuid)->first();
+            $section = $item?->section;
+        }
+        $sectionName = trim((string) ($section?->title ?: data_get($command->payload, 'title')));
+        $sectionName = $sectionName !== '' ? ' „'.Str::limit($sectionName, 45).'“' : '';
+        $count = count((array) ($command->payload['uuids'] ?? []));
+        $label = match ($command->name) {
+            'section.create' => 'Přidat sekci'.$sectionName,
+            'section.update', 'section.visibility' => 'Upravit sekci'.$sectionName,
+            'section.delete' => 'Odstranit sekci'.$sectionName,
+            'section.delete_many' => 'Odstranit sekce'.($count ? ' ('.$count.')' : ''),
+            'section.reorder' => 'Změnit pořadí sekcí',
+            'section.duplicate' => 'Duplikovat sekci'.$sectionName,
+            'section.paste' => 'Vložit zkopírovanou sekci',
+            'item.create' => 'Přidat položku do sekce'.$sectionName,
+            'item.update', 'item.visibility' => 'Upravit položku v sekci'.$sectionName,
+            'item.delete' => 'Odstranit položku ze sekce'.$sectionName,
+            'item.delete_many' => 'Odstranit položky'.($count ? ' ('.$count.')' : ''),
+            'item.reorder' => 'Změnit pořadí položek'.$sectionName,
+            'item.move' => 'Přesunout položku',
+            'item.duplicate' => 'Duplikovat položku'.$sectionName,
+            default => 'Změnit stránku',
+        };
+
+        return [
+            'label' => $label,
+            'time' => now()->format('H:i:s'),
+            'user' => $user?->full_name ?: $user?->login ?: 'Systém',
+            'coalesce_key' => in_array($command->name, ['section.update', 'item.update'], true) && $uuid !== ''
+                ? $command->name.':'.$uuid
+                : null,
+        ];
     }
 
     private function assertContext(BuilderPage $page, PageCommand $command, ?User $user): void
@@ -195,6 +264,7 @@ final class PageCommandService
             throw new \ValidationException(['type' => 'Neznámý typ sekce.']);
         }
         $defaults = SectionRegistry::instance()->defaults($type);
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
         $position = $this->position($page->sections(), $payload);
         $this->makeRoom('humlnetcreative_pages_sections', 'page_id', $page->id, $position);
         $section = Section::create([
@@ -236,8 +306,11 @@ final class PageCommandService
     private function deleteSection(BuilderPage $page, array $payload): array
     {
         $section = $this->section($page, (string) ($payload['uuid'] ?? ''));
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
+        $section->refresh();
         $position = (int) $section->sort_order;
         $section->delete();
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
 
         return [['section_uuid' => $section->uuid], new PageCommand('section.restore', $page->id, 0, ['uuid' => $section->uuid, 'position' => $position])];
     }
@@ -245,8 +318,11 @@ final class PageCommandService
     private function restoreSection(BuilderPage $page, array $payload): array
     {
         $section = Section::withTrashed()->where('page_id', $page->id)->where('uuid', $payload['uuid'] ?? '')->firstOrFail();
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
+        $position = $this->position($page->sections(), $payload);
+        $this->makeRoom('humlnetcreative_pages_sections', 'page_id', $page->id, $position);
         $section->restore();
-        $section->sort_order = (int) ($payload['position'] ?? $section->sort_order);
+        $section->sort_order = $position;
         $section->save();
 
         return [['section_uuid' => $section->uuid], new PageCommand('section.delete', $page->id, 0, ['uuid' => $section->uuid])];
@@ -293,6 +369,9 @@ final class PageCommandService
     private function duplicateSection(BuilderPage $page, array $payload): array
     {
         $source = $this->section($page, (string) ($payload['uuid'] ?? ''));
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
+        $source->refresh();
+        $payload['position'] ??= (int) $source->sort_order + 1;
         $clone = $this->importSection($page, $this->exportSection($source), true, $payload);
 
         return [['section_uuid' => $clone->uuid], new PageCommand('section.delete', $page->id, 0, ['uuid' => $clone->uuid])];
@@ -509,7 +588,8 @@ final class PageCommandService
 
     private function importSection(BuilderPage $page, array $data, bool $freshUuids, array $payload): Section
     {
-        $position = $this->position($page->sections(), $payload, ((int) $data['sort_order']) + 1);
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
+        $position = $this->position($page->sections(), $payload);
         $this->makeRoom('humlnetcreative_pages_sections', 'page_id', $page->id, $position);
         $section = Section::create([
             'uuid' => $freshUuids ? (string) Str::uuid() : $data['uuid'],
@@ -595,9 +675,26 @@ final class PageCommandService
 
     private function position($relation, array $payload, ?int $fallback = null): int
     {
-        return isset($payload['position'])
-            ? max(1, (int) $payload['position'])
-            : ($fallback ?? ((int) $relation->max('sort_order')) + 1);
+        $maximum = (int) $relation->count() + 1;
+        $position = isset($payload['position'])
+            ? (int) $payload['position']
+            : ($fallback ?? $maximum);
+
+        return min($maximum, max(1, $position));
+    }
+
+    /** Maintains the command API invariant that visible records use ordinal positions 1…N. */
+    private function normalizeOrders(string $table, string $foreignKey, int $foreignId): void
+    {
+        $ids = DB::table($table)
+            ->where($foreignKey, $foreignId)
+            ->whereNull('deleted_at')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->pluck('id');
+        foreach ($ids as $index => $id) {
+            DB::table($table)->where('id', $id)->update(['sort_order' => $index + 1]);
+        }
     }
 
     private function makeRoom(string $table, string $foreignKey, int $foreignId, int $position): void

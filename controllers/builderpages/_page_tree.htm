@@ -1,0 +1,15 @@
+<ul class="hucr-page-tree__level">
+    <?php foreach ($pages as $page): ?>
+        <li>
+            <a href="<?= e($page['url']) ?>" class="hucr-page-tree__item <?= $page['current'] ? 'is-current' : '' ?>" <?= $page['current'] ? 'aria-current="page"' : '' ?>>
+                <i class="<?= $page['children'] ? 'icon-folder-open' : 'icon-file-o' ?>" aria-hidden="true"></i>
+                <span><strong><?= e($page['title']) ?></strong><small><?= e($page['path']) ?></small></span>
+                <?php if ($page['has_draft']): ?><i class="icon-circle hucr-page-tree__draft" title="Nepublikovaný koncept" aria-label="Nepublikovaný koncept"></i><?php endif ?>
+                <?php if (!$page['published']): ?><i class="icon-eye-slash" title="Dosud nepublikováno" aria-label="Dosud nepublikováno"></i><?php endif ?>
+            </a>
+            <?php if ($page['children']): ?>
+                <?= $this->makePartial('page_tree', ['pages' => $page['children']]) ?>
+            <?php endif ?>
+        </li>
+    <?php endforeach ?>
+</ul>

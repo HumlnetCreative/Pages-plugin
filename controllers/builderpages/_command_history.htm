@@ -1,0 +1,22 @@
+<?php $timeline = $commandTimeline ?? ['position' => 0, 'total' => 0, 'entries' => []]; ?>
+<div class="hucr-command-history" data-hucr-command-history data-current-position="<?= (int) $timeline['position'] ?>">
+    <div class="hucr-command-history__summary">
+        <strong>Krok <?= (int) $timeline['position'] ?> z <?= (int) $timeline['total'] ?></strong>
+        <small>Historie platí jen pro tuto editační relaci.</small>
+    </div>
+    <ol data-hucr-history-list>
+        <li class="<?= (int) $timeline['position'] === 0 ? 'is-current' : '' ?>">
+            <button type="button" data-request="onJumpCommandHistory" data-request-data="target_position: 0" <?= (int) $timeline['position'] === 0 ? 'disabled' : '' ?>>
+                <i class="icon-flag" aria-hidden="true"></i><span><strong>Začátek relace</strong></span>
+            </button>
+        </li>
+        <?php foreach ($timeline['entries'] as $entry): ?>
+            <li class="<?= $entry['position'] === $timeline['position'] ? 'is-current' : '' ?> <?= !$entry['applied'] ? 'is-future' : '' ?>">
+                <button type="button" data-request="onJumpCommandHistory" data-request-data="target_position: <?= (int) $entry['position'] ?>" <?= $entry['position'] === $timeline['position'] ? 'disabled' : '' ?>>
+                    <i class="<?= $entry['applied'] ? 'icon-check' : 'icon-repeat' ?>" aria-hidden="true"></i>
+                    <span><strong><?= e($entry['label']) ?></strong><small><?= e(trim($entry['time'].' · '.$entry['user'], ' ·')) ?></small></span>
+                </button>
+            </li>
+        <?php endforeach ?>
+    </ol>
+</div>

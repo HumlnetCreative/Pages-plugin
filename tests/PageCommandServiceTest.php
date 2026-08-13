@@ -10,6 +10,7 @@ use HumlnetCreative\Pages\Models\SectionItem;
 use HumlnetCreative\Pages\Services\PageCommandService;
 use HumlnetCreative\Pages\Services\PageCommandHistory;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use PluginTestCase;
 
 final class PageCommandServiceTest extends PluginTestCase
@@ -252,6 +253,110 @@ final class PageCommandServiceTest extends PluginTestCase
         $this->assertFalse($history->reconcile($page->id, $created->draftVersion + 1));
         $this->assertFalse($history->canUndo($page->id));
         $this->assertFalse($history->canRedo($page->id));
+    }
+
+    public function testCreateAtCanvasInsertionPointMakesRoomWithoutLosingSections(): void
+    {
+        $page = $this->page('vlozeni-doprostred');
+        $first = $this->cards($page, 'První');
+        $second = $this->cards($page, 'Druhá');
+
+        $result = app(PageCommandService::class)->execute(new PageCommand(
+            'section.create',
+            $page->id,
+            (int) $page->fresh()->draft_version,
+            ['type' => 'text', 'title' => 'Vložený text', 'position' => 2],
+        ));
+
+        $ordered = $page->sections()->orderBy('sort_order')->get();
+        $this->assertCount(3, $ordered);
+        $this->assertSame([$first->uuid, $result->data['section_uuid'], $second->uuid], $ordered->pluck('uuid')->all());
+        $this->assertSame([1, 2, 3], $ordered->pluck('sort_order')->map(fn($value) => (int) $value)->all());
+    }
+
+    public function testCanvasInsertionPositionStaysOrdinalAfterDeleteUndoAndGappedLegacyOrders(): void
+    {
+        $page = $this->page('stabilni-vlozeni');
+        $first = $this->cards($page, 'První');
+        $second = $this->cards($page, 'Druhá');
+        $third = $this->cards($page, 'Třetí');
+        $commands = app(PageCommandService::class);
+
+        $deleted = $commands->execute(new PageCommand('section.delete', $page->id, (int) $page->fresh()->draft_version, [
+            'uuid' => $second->uuid,
+        ]));
+        $restored = $commands->undo($page->id, $deleted->draftVersion);
+        DB::table('humlnetcreative_pages_sections')->where('id', $first->id)->update(['sort_order' => 3]);
+        DB::table('humlnetcreative_pages_sections')->where('id', $second->id)->update(['sort_order' => 8]);
+        DB::table('humlnetcreative_pages_sections')->where('id', $third->id)->update(['sort_order' => 12]);
+
+        $inserted = $commands->execute(new PageCommand('section.create', $page->id, $restored->draftVersion, [
+            'type' => 'cta', 'title' => 'Mezi první a druhou', 'position' => 2,
+        ]));
+        $ordered = $page->sections()->orderBy('sort_order')->get();
+
+        $this->assertSame(
+            [$first->uuid, $inserted->data['section_uuid'], $second->uuid, $third->uuid],
+            $ordered->pluck('uuid')->all(),
+        );
+        $this->assertSame([1, 2, 3, 4], $ordered->pluck('sort_order')->map(fn($value) => (int) $value)->all());
+
+        $commands->undo($page->id, $inserted->draftVersion);
+        $afterUndo = $page->sections()->orderBy('sort_order')->get();
+        $this->assertSame([$first->uuid, $second->uuid, $third->uuid], $afterUndo->pluck('uuid')->all());
+        $this->assertSame([1, 2, 3], $afterUndo->pluck('sort_order')->map(fn($value) => (int) $value)->all());
+    }
+
+    public function testNamedTimelineSurvivesUndoRedoAndCanJumpAcrossMultipleSteps(): void
+    {
+        $page = $this->page('pojmenovana-historie');
+        $commands = app(PageCommandService::class);
+        $created = $commands->execute(new PageCommand('section.create', $page->id, (int) $page->fresh()->draft_version, [
+            'type' => 'text', 'title' => 'Historický text',
+        ]));
+        $updated = $commands->execute(new PageCommand('section.update', $page->id, $created->draftVersion, [
+            'uuid' => $created->data['section_uuid'], 'changes' => ['title' => 'Upravený text'],
+        ]));
+        $history = app(PageCommandHistory::class);
+        $timeline = $history->timeline($page->id);
+
+        $this->assertSame(2, $timeline['position']);
+        $this->assertSame(2, $timeline['total']);
+        $this->assertSame('Přidat sekci „Historický text“', $timeline['entries'][0]['label']);
+        $this->assertSame('Upravit sekci „Historický text“', $timeline['entries'][1]['label']);
+
+        $atStart = $commands->jump($page->id, $updated->draftVersion, 0);
+        $this->assertSame(0, $history->timeline($page->id)['position']);
+        $this->assertSoftDeleted('humlnetcreative_pages_sections', ['uuid' => $created->data['section_uuid']]);
+
+        $atEnd = $commands->jump($page->id, $atStart->draftVersion, 2);
+        $this->assertSame(2, $history->timeline($page->id)['position']);
+        $this->assertSame('Upravený text', Section::where('uuid', $atEnd->data['section_uuid'])->value('title'));
+    }
+
+    public function testSuccessiveUpdatesOfOneSectionAreOneUndoStep(): void
+    {
+        $page = $this->page('sloucena-historie');
+        $section = $this->cards($page, 'Původní název');
+        $commands = app(PageCommandService::class);
+
+        $first = $commands->execute(new PageCommand('section.update', $page->id, (int) $page->fresh()->draft_version, [
+            'uuid' => $section->uuid,
+            'changes' => ['title' => 'Automaticky uložený název'],
+        ]));
+        $second = $commands->execute(new PageCommand('section.update', $page->id, $first->draftVersion, [
+            'uuid' => $section->uuid,
+            'changes' => ['title' => 'Konečný název'],
+        ]));
+
+        $history = app(PageCommandHistory::class);
+        $this->assertSame(1, $history->timeline($page->id)['total']);
+
+        $undone = $commands->undo($page->id, $second->draftVersion);
+        $this->assertSame('Původní název', Section::where('uuid', $section->uuid)->value('title'));
+
+        $commands->redo($page->id, $undone->draftVersion);
+        $this->assertSame('Konečný název', Section::where('uuid', $section->uuid)->value('title'));
     }
 
     private function page(string $slug): BuilderPage

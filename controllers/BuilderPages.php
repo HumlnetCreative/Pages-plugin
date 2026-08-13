@@ -20,15 +20,20 @@ use HumlnetCreative\Pages\Services\PageEditLockService;
 use HumlnetCreative\Pages\Services\PagePublicationService;
 use HumlnetCreative\Pages\Services\PageCommandService;
 use HumlnetCreative\Pages\Services\PageCommandHistory;
+use HumlnetCreative\Pages\Services\CanvasSectionPresenter;
 use HumlnetCreative\Pages\Services\SectionRegistry;
 use HumlnetCreative\Pages\Services\WorkingCopyRestorer;
 use Backend\Facades\BackendAuth;
+use Backend\Models\UserPreference;
 use Illuminate\Support\Facades\Storage;
 use Flash;
 use Tailor\Classes\BlueprintIndexer;
 
 class BuilderPages extends Controller
 {
+    private const EDITOR_VIEW_PREFERENCE = 'humlnetcreative.pages::builder.editor_view';
+    private const CANVAS_PANELS_PREFERENCE = 'humlnetcreative.pages::builder.canvas_panels';
+
     public $implement = [FormController::class, ListController::class, RelationController::class];
     public $formConfig = 'config_form.yaml';
     public $listConfig = 'config_list.yaml';
@@ -38,6 +43,7 @@ class BuilderPages extends Controller
     public function __construct()
     {
         parent::__construct();
+        $this->bodyClass = trim($this->bodyClass.' hucr-builder-workspace');
         BackendMenu::setContext('HumlnetCreative.Pages', 'main-menu-item', 'side-menu-builder');
     }
 
@@ -59,6 +65,12 @@ class BuilderPages extends Controller
         $this->vars['pageLockState'] = $state;
         $this->vars['pageReadOnly'] = !$state?->writable;
         $this->vars['builderPage'] = $page;
+        $this->vars['builderEditorView'] = $this->editorViewPreference();
+        $this->vars['canvasPanelPreferences'] = $this->canvasPanelPreferences();
+        $this->vars['canvasSections'] = $this->canvasSections($page);
+        $this->vars['canvasPageTree'] = $this->canvasPageTree($page);
+        $this->vars['canvasCatalog'] = $this->canvasCatalog();
+        $this->vars['commandTimeline'] = app(PageCommandHistory::class)->timeline($page->id);
         $latestLifecycleAudit = $page->has_draft
             ? PageAuditLog::where('page_id', $page->id)
                 ->whereIn('action', ['history.restored', 'draft.published', 'draft.discarded'])
@@ -72,6 +84,103 @@ class BuilderPages extends Controller
         app(PageCommandHistory::class)->reconcile($page->id, (int) $page->draft_version);
 
         return $result;
+    }
+
+    /** Stores the table/canvas choice independently for every backend user. */
+    public function onSetEditorView(): array
+    {
+        $view = (string) request()->input('editor_view');
+        if (!in_array($view, ['table', 'canvas'], true)) {
+            throw new \ApplicationException('Neplatný pohled editoru.');
+        }
+
+        UserPreference::forUser()->set(self::EDITOR_VIEW_PREFERENCE, $view);
+
+        if ($view === 'canvas') {
+            $page = $this->pageForRequest();
+            $this->dispatchBrowserEventAsync('hucr:canvas-refresh');
+
+            return [
+                '#hucr-builder-canvas-content' => $this->makePartial('canvas', [
+                    'canvasSections' => $this->canvasSections($page),
+                    'pageReadOnly' => (bool) ($this->vars['pageReadOnly'] ?? true),
+                    'canvasPanelPreferences' => $this->canvasPanelPreferences(),
+                    'canvasPageTree' => $this->canvasPageTree($page),
+                    'canvasCatalog' => $this->canvasCatalog(),
+                    'builderPage' => $page,
+                    'commandTimeline' => app(PageCommandHistory::class)->timeline($page->id),
+                    'activeInspectorTab' => $this->activeInspectorTab(),
+                ]),
+            ];
+        }
+
+        return [];
+    }
+
+    /** Toggles a collapsible Canvas panel for the current backend user. */
+    public function onToggleCanvasPanel(): array
+    {
+        $panel = (string) request()->input('panel');
+        if (!in_array($panel, ['navigator', 'inspector', 'pages', 'outline'], true)) {
+            throw new \ApplicationException('Neplatný panel Canvasu.');
+        }
+
+        $preferences = $this->canvasPanelPreferences();
+        $preferences[$panel] = !$preferences[$panel];
+        UserPreference::forUser()->set(self::CANVAS_PANELS_PREFERENCE, $preferences);
+
+        return [];
+    }
+
+    /** Saves simple Canvas fields through the same versioned command as every editor. */
+    public function onQuickUpdateSection(): array
+    {
+        $page = $this->pageForRequest();
+        $section = Section::where('page_id', $page->id)
+            ->where('uuid', (string) request()->input('canvas_quick.uuid'))
+            ->firstOrFail();
+        $input = (array) request()->input('canvas_quick', []);
+        $title = trim((string) ($input['title'] ?? ''));
+        if ($title === '') {
+            throw new \ValidationException(['canvas_quick.title' => 'Interní název sekce je povinný.']);
+        }
+
+        $changes = [
+            'title' => $title,
+            'is_published' => request()->boolean('canvas_quick.visible'),
+        ];
+        if (SectionRegistry::instance()->wireframe($section->type)['heading'] === 'content.heading') {
+            $content = (array) $section->content;
+            data_set($content, 'heading', trim((string) ($input['heading'] ?? '')));
+            $changes['content'] = $content;
+        }
+
+        $changes = array_filter($changes, function(mixed $value, string $key) use ($section): bool {
+            $current = $section->getAttribute($key);
+            if ($key === 'is_published') {
+                return (bool) $value !== (bool) $current;
+            }
+
+            return is_array($value)
+                ? $value != (array) $current
+                : $value !== $current;
+        }, ARRAY_FILTER_USE_BOTH);
+        if (!$changes) {
+            return [];
+        }
+
+        $result = $this->runPageCommand($page, 'section.update', [
+            'uuid' => $section->uuid,
+            'changes' => $changes,
+        ]);
+        $this->announceCommandResult($result);
+        $section->refresh()->load(['items', 'slider', 'faq_group', 'gallery.images']);
+        $this->dispatchBrowserEventAsync('hucr:canvas-section-updated', [
+            'section' => app(CanvasSectionPresenter::class)->present($section),
+        ]);
+        Flash::success('Rychlá úprava sekce byla uložena.');
+
+        return [];
     }
 
     public function onSaveAndPublish($recordId = null)
@@ -323,7 +432,23 @@ class BuilderPages extends Controller
         $this->announceCommandResult($result);
         Flash::success($field === 'sections' ? 'Sekce byla uložena.' : 'Položka byla uložena.');
 
-        return $this->asExtension('RelationController')->relationRefresh($field);
+        $response = $this->asExtension('RelationController')->relationRefresh($field);
+        if ($field === 'sections') {
+            $this->dispatchBrowserEventAsync('hucr:canvas-refresh', ['selectedUuid' => $model->uuid]);
+            $response['#hucr-builder-canvas-content'] = $this->makePartial('canvas', [
+                'canvasSections' => $this->canvasSections($page),
+                'selectedCanvasUuid' => $model->uuid,
+                'pageReadOnly' => (bool) ($this->vars['pageReadOnly'] ?? false),
+                'canvasPanelPreferences' => $this->canvasPanelPreferences(),
+                'canvasPageTree' => $this->canvasPageTree($page),
+                'canvasCatalog' => $this->canvasCatalog(),
+                'builderPage' => $page,
+                'commandTimeline' => app(PageCommandHistory::class)->timeline($page->id),
+                'activeInspectorTab' => $this->activeInspectorTab(),
+            ]);
+        }
+
+        return $response;
     }
 
     public function update_onRelationManageUpdate(): array
@@ -388,6 +513,11 @@ class BuilderPages extends Controller
 
     public function relationExtendManageFormWidget($widget, $field, $model)
     {
+        // Relation popup tabs must not share the page form's URL hash
+        // (for example both forms can contain a tab named "Vzhled").
+        $widget->getTab('primary')?->linkable(false);
+        $widget->getTab('secondary')?->linkable(false);
+
         $widget->bindEvent('form.extendFields', function($fields) use ($widget, $field) {
             if ($field === 'sections' && $widget->model instanceof Section && $widget->model->type) {
                 $this->pruneSectionForm($widget, $widget->model->type);
@@ -773,15 +903,31 @@ class BuilderPages extends Controller
         $result = $this->runPageCommand($page, 'section.create', [
             'type' => $type,
             'title' => $definition['label'],
+            'position' => max(1, (int) request()->input('builder_position', $page->sections()->count() + 1)),
             // Relational sections need their content source selected before publication.
             'is_published' => !$requiresSource,
         ]);
         $this->announceCommandResult($result);
         Flash::success($requiresSource
             ? 'Sekce byla přidána jako skrytá. Vyberte její obsahový zdroj a potom ji publikujte.'
-            : 'Sekce byla přidána na konec stránky.');
+            : 'Sekce byla přidána do stránky.');
 
-        return $this->relationRefresh('sections');
+        $selectedUuid = $result->data['section_uuid'];
+        $this->dispatchBrowserEventAsync('hucr:canvas-refresh', ['selectedUuid' => $selectedUuid]);
+
+        return $this->relationRefresh('sections') + [
+            '#hucr-builder-canvas-content' => $this->makePartial('canvas', [
+                'canvasSections' => $this->canvasSections($page),
+                'selectedCanvasUuid' => $selectedUuid,
+                'pageReadOnly' => (bool) ($this->vars['pageReadOnly'] ?? false),
+                'canvasPanelPreferences' => $this->canvasPanelPreferences(),
+                'canvasPageTree' => $this->canvasPageTree($page),
+                'canvasCatalog' => $this->canvasCatalog(),
+                'builderPage' => $page,
+                'commandTimeline' => app(PageCommandHistory::class)->timeline($page->id),
+                'activeInspectorTab' => $this->activeInspectorTab(),
+            ]),
+        ];
     }
 
     public function onDuplicateSection(): array
@@ -793,6 +939,70 @@ class BuilderPages extends Controller
         Flash::success('Sekce byla duplikována včetně lokálního obsahu.');
 
         return $this->relationRefresh('sections');
+    }
+
+    /** Reorders top-level Canvas sections through the shared versioned command API. */
+    public function onCanvasReorderSections(): array
+    {
+        $page = $this->pageForRequest();
+        $orderedUuids = json_decode((string) request()->input('canvas_order', ''), true);
+        if (!is_array($orderedUuids)) {
+            throw new \ValidationException(['canvas_order' => 'Pořadí sekcí se nepodařilo načíst.']);
+        }
+
+        $result = $this->runPageCommand($page, 'section.reorder', [
+            'ordered_uuids' => array_values(array_map('strval', $orderedUuids)),
+        ]);
+        $this->announceCommandResult($result);
+        Flash::success('Pořadí sekcí bylo změněno.');
+
+        return $this->commandRefresh($page);
+    }
+
+    /** Duplicates the selected Canvas section and keeps the duplicate selected. */
+    public function onCanvasDuplicateSection(): array
+    {
+        $page = $this->pageForRequest();
+        $section = Section::where('page_id', $page->id)
+            ->where('uuid', (string) request()->input('section_uuid'))
+            ->firstOrFail();
+        $result = $this->runPageCommand($page, 'section.duplicate', ['uuid' => $section->uuid]);
+        $this->announceCommandResult($result);
+        Flash::success('Sekce byla duplikována včetně lokálního obsahu.');
+
+        return $this->commandRefresh($page, (string) $result->data['section_uuid']);
+    }
+
+    /** Toggles Canvas section visibility through an undoable command. */
+    public function onCanvasToggleSectionVisibility(): array
+    {
+        $page = $this->pageForRequest();
+        $section = Section::where('page_id', $page->id)
+            ->where('uuid', (string) request()->input('section_uuid'))
+            ->firstOrFail();
+        $visible = !$section->is_published;
+        $result = $this->runPageCommand($page, 'section.visibility', [
+            'uuid' => $section->uuid,
+            'visible' => $visible,
+        ]);
+        $this->announceCommandResult($result);
+        Flash::success($visible ? 'Sekce je znovu viditelná.' : 'Sekce byla skryta.');
+
+        return $this->commandRefresh($page, $section->uuid);
+    }
+
+    /** Soft-deletes the selected Canvas section through an undoable command. */
+    public function onCanvasDeleteSection(): array
+    {
+        $page = $this->pageForRequest();
+        $section = Section::where('page_id', $page->id)
+            ->where('uuid', (string) request()->input('section_uuid'))
+            ->firstOrFail();
+        $result = $this->runPageCommand($page, 'section.delete', ['uuid' => $section->uuid]);
+        $this->announceCommandResult($result);
+        Flash::success('Sekce byla odstraněna. Lze ji vrátit akcí Zpět.');
+
+        return $this->commandRefresh($page, '');
     }
 
     public function onCopySection(): array
@@ -846,9 +1056,106 @@ class BuilderPages extends Controller
         return $this->commandRefresh($page);
     }
 
+    public function onJumpCommandHistory(): array
+    {
+        $page = $this->pageForRequest();
+        $target = (int) request()->input('target_position', -1);
+        $result = app(PageCommandService::class)->jump($page->id, $this->expectedDraftVersion(), $target);
+        if (!$result) {
+            return [];
+        }
+
+        $this->announceCommandResult($result);
+        Flash::success('Koncept byl přesunut na vybraný bod historie relace.');
+
+        return $this->commandRefresh($page);
+    }
+
     protected function allowedSectionTypes(): array
     {
         return array_keys(SectionRegistry::instance()->optionsForBackendUser());
+    }
+
+    private function editorViewPreference(): string
+    {
+        $view = UserPreference::forUser()->get(self::EDITOR_VIEW_PREFERENCE, 'canvas');
+
+        return in_array($view, ['table', 'canvas'], true) ? $view : 'canvas';
+    }
+
+    private function canvasPanelPreferences(): array
+    {
+        $stored = UserPreference::forUser()->get(self::CANVAS_PANELS_PREFERENCE, []);
+
+        return [
+            'navigator' => (bool) data_get($stored, 'navigator', false),
+            'inspector' => (bool) data_get($stored, 'inspector', false),
+            'pages' => (bool) data_get($stored, 'pages', false),
+            'outline' => (bool) data_get($stored, 'outline', false),
+        ];
+    }
+
+    private function activeInspectorTab(): string
+    {
+        $tab = (string) request()->input('active_inspector_tab', 'edit');
+
+        return in_array($tab, ['edit', 'layout', 'history', 'checks'], true) ? $tab : 'edit';
+    }
+
+    private function canvasSections(BuilderPage $page): array
+    {
+        $allowed = array_keys(SectionRegistry::instance()->optionsForBackendUser());
+        $sections = Section::with(['items.media.asset', 'media.asset', 'slider', 'faq_group', 'gallery.images'])
+            ->where('page_id', $page->id)
+            ->whereIn('type', $allowed)
+            ->orderBy('sort_order')
+            ->get();
+        $presenter = app(CanvasSectionPresenter::class);
+
+        return $sections->map(fn(Section $section) => $presenter->present($section))->all();
+    }
+
+    private function canvasPageTree(BuilderPage $currentPage): array
+    {
+        $query = BuilderPage::withoutGlobalScopes()->orderBy('sort_order')->orderBy('title');
+        is_null($currentPage->site_id)
+            ? $query->whereNull('site_id')
+            : $query->where('site_id', $currentPage->site_id);
+        $pages = $query->get();
+        $byParent = $pages->groupBy(fn(BuilderPage $page) => (int) ($page->parent_id ?: 0));
+        $build = function(int $parentId) use (&$build, $byParent, $currentPage): array {
+            return $byParent->get($parentId, collect())->map(fn(BuilderPage $page) => [
+                'id' => (int) $page->id,
+                'title' => (string) $page->title,
+                'path' => $page->is_home ? '/' : '/'.trim((string) $page->fullslug, '/'),
+                'url' => Backend::url('humlnetcreative/pages/builderpages/update/'.$page->id),
+                'current' => (int) $page->id === (int) $currentPage->id,
+                'has_draft' => (bool) $page->has_draft,
+                'published' => (bool) $page->published_revision_id,
+                'children' => $build((int) $page->id),
+            ])->all();
+        };
+
+        return $build(0);
+    }
+
+    private function canvasCatalog(): array
+    {
+        $labels = [
+            'basic' => 'Základní obsah',
+            'media' => 'Média',
+            'structure' => 'Struktura',
+            'project' => 'Projektové typy',
+        ];
+        $registry = SectionRegistry::instance();
+        $groups = [];
+        foreach ($registry->optionsForBackendUser() as $type => $label) {
+            $category = $registry->category($type);
+            $groups[$category]['label'] = $labels[$category] ?? 'Další';
+            $groups[$category]['types'][] = ['type' => $type, 'label' => $label];
+        }
+
+        return array_values($groups);
     }
 
     protected function assertCanManageOwner($owner): void
@@ -965,14 +1272,29 @@ class BuilderPages extends Controller
             'hasDraft' => true,
             'canUndo' => $history->canUndo($result->pageId),
             'canRedo' => $history->canRedo($result->pageId),
+            'commandHistory' => $history->timeline($result->pageId),
         ]);
     }
 
-    private function commandRefresh(BuilderPage $page): array
+    private function commandRefresh(BuilderPage $page, ?string $selectedUuid = null): array
     {
         $this->asExtension('RelationController')->initRelation($page, 'sections');
+        $selectedUuid ??= (string) request()->input('selected_canvas_uuid');
+        $this->dispatchBrowserEventAsync('hucr:canvas-refresh', ['selectedUuid' => $selectedUuid]);
 
-        return $this->asExtension('RelationController')->relationRefresh('sections');
+        return $this->asExtension('RelationController')->relationRefresh('sections') + [
+            '#hucr-builder-canvas-content' => $this->makePartial('canvas', [
+                'canvasSections' => $this->canvasSections($page),
+                'selectedCanvasUuid' => $selectedUuid,
+                'pageReadOnly' => (bool) ($this->vars['pageReadOnly'] ?? false),
+                'canvasPanelPreferences' => $this->canvasPanelPreferences(),
+                'canvasPageTree' => $this->canvasPageTree($page),
+                'canvasCatalog' => $this->canvasCatalog(),
+                'builderPage' => $page,
+                'commandTimeline' => app(PageCommandHistory::class)->timeline($page->id),
+                'activeInspectorTab' => $this->activeInspectorTab(),
+            ]),
+        ];
     }
 
     private function assertWritablePage(BuilderPage $page): void

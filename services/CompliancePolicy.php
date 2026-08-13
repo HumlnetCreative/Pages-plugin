@@ -9,7 +9,9 @@ class CompliancePolicy
         $theme = Theme::getActiveTheme();
         $path = $theme ? $theme->getPath().'/config/page-builder-compliance.php' : null;
         $config = $path && is_file($path) ? require $path : [];
-        return in_array($config['mode'] ?? 'warn', ['off', 'warn', 'strict'], true) ? $config['mode'] : 'warn';
+        $mode = $config['mode'] ?? 'warn';
+
+        return in_array($mode, ['off', 'warn', 'strict'], true) ? $mode : 'warn';
     }
 
     public static function shouldBlock(): bool

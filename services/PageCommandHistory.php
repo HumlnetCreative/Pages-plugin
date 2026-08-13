@@ -6,10 +6,30 @@ final class PageCommandHistory
 {
     public const MAX_ENTRIES = 100;
 
-    public function push(int $pageId, PageCommand $undo, PageCommand $redo): void
+    public function push(int $pageId, PageCommand $undo, PageCommand $redo, array $meta = []): void
     {
         $undoStack = $this->stack($pageId, 'undo');
-        $undoStack[] = ['undo' => $undo->toArray(), 'redo' => $redo->toArray()];
+        $entry = ['undo' => $undo->toArray(), 'redo' => $redo->toArray(), 'meta' => $meta];
+        $lastIndex = array_key_last($undoStack);
+        $canCoalesce = $lastIndex !== null
+            && !$this->canRedo($pageId)
+            && ($meta['coalesce_key'] ?? null)
+            && data_get($undoStack[$lastIndex], 'meta.coalesce_key') === $meta['coalesce_key'];
+        if ($canCoalesce) {
+            $previousRedo = (array) data_get($undoStack[$lastIndex], 'redo');
+            $nextRedo = $redo->toArray();
+            if (isset($previousRedo['payload']['changes'], $nextRedo['payload']['changes'])) {
+                $nextRedo['payload']['changes'] = array_replace(
+                    (array) $previousRedo['payload']['changes'],
+                    (array) $nextRedo['payload']['changes'],
+                );
+            }
+            $undoStack[$lastIndex]['redo'] = $nextRedo;
+            $undoStack[$lastIndex]['meta'] = $meta;
+        }
+        else {
+            $undoStack[] = $entry;
+        }
         session()->put($this->key($pageId, 'undo'), array_slice($undoStack, -self::MAX_ENTRIES));
         session()->forget($this->key($pageId, 'redo'));
         $this->setHeadVersion($pageId, $undo->expectedDraftVersion);
@@ -86,6 +106,28 @@ final class PageCommandHistory
     public function canRedo(int $pageId): bool
     {
         return $this->stack($pageId, 'redo') !== [];
+    }
+
+    /** Returns a stable chronological timeline and the cursor between applied and undone steps. */
+    public function timeline(int $pageId): array
+    {
+        $undo = $this->stack($pageId, 'undo');
+        $redo = array_reverse($this->stack($pageId, 'redo'));
+        $entries = array_values(array_map(function(array $entry, int $index) use ($undo): array {
+            return [
+                'position' => $index + 1,
+                'applied' => $index < count($undo),
+                'label' => (string) data_get($entry, 'meta.label', 'Změna stránky'),
+                'time' => (string) data_get($entry, 'meta.time', ''),
+                'user' => (string) data_get($entry, 'meta.user', ''),
+            ];
+        }, array_merge($undo, $redo), array_keys(array_merge($undo, $redo))));
+
+        return [
+            'position' => count($undo),
+            'total' => count($entries),
+            'entries' => $entries,
+        ];
     }
 
     private function pop(int $pageId, string $direction): ?array
