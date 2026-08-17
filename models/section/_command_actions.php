@@ -1,4 +1,7 @@
 <div class="btn-group">
+    <?php if (BackendAuth::userHasPermission('humlnetcreative.pages.structure.reorder')): ?>
+        <button type="button" class="btn btn-default btn-sm" data-control="popup" data-handler="onOpenSectionMove" data-request-data="page_id: <?= (int) $record->page_id ?>, section_id: <?= (int) $record->id ?>" title="Přesunout sekci"><i class="icon-list-reorder" aria-hidden="true"></i> Přesunout</button>
+    <?php endif ?>
     <?php if (BackendAuth::userHasPermission('humlnetcreative.pages.structure.duplicate')): ?>
         <button type="button" class="btn btn-default btn-sm" data-request="onDuplicateSection" data-request-data="page_id: <?= (int) $record->page_id ?>, section_id: <?= (int) $record->id ?>" data-load-indicator="Duplikuji…" title="Duplikovat sekci"><i class="icon-copy" aria-hidden="true"></i> Duplikovat</button>
     <?php endif ?>

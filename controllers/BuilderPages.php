@@ -9,6 +9,7 @@ use BackendMenu;
 use HumlnetCreative\Pages\Models\BuilderPage;
 use HumlnetCreative\Pages\Models\Section;
 use HumlnetCreative\Pages\Models\SectionItem;
+use HumlnetCreative\Pages\Models\SectionContainer;
 use HumlnetCreative\Pages\Models\MediaUse;
 use HumlnetCreative\Pages\Models\PageAuditLog;
 use HumlnetCreative\Pages\Models\PageRevision;
@@ -20,6 +21,7 @@ use HumlnetCreative\Pages\Services\PageEditLockService;
 use HumlnetCreative\Pages\Services\PagePublicationService;
 use HumlnetCreative\Pages\Services\PageCommandService;
 use HumlnetCreative\Pages\Services\PageCommandHistory;
+use HumlnetCreative\Pages\Services\PageStructureService;
 use HumlnetCreative\Pages\Services\CanvasSectionPresenter;
 use HumlnetCreative\Pages\Services\SectionRegistry;
 use HumlnetCreative\Pages\Services\WorkingCopyRestorer;
@@ -127,6 +129,46 @@ class BuilderPages extends Controller
 
         $preferences = $this->canvasPanelPreferences();
         $preferences[$panel] = !$preferences[$panel];
+        UserPreference::forUser()->set(self::CANVAS_PANELS_PREFERENCE, $preferences);
+
+        return [];
+    }
+
+    /** Opens a Canvas side panel (and optionally one of the navigator sections). */
+    public function onOpenCanvasPanel(): array
+    {
+        $panel = (string) request()->input('panel');
+        if (!in_array($panel, ['navigator', 'inspector'], true)) {
+            throw new \ApplicationException('Neplatný panel Canvasu.');
+        }
+
+        $preferences = $this->canvasPanelPreferences();
+        $preferences[$panel] = false;
+        $section = (string) request()->input('section');
+        if ($panel === 'navigator' && in_array($section, ['pages', 'outline'], true)) {
+            $preferences[$section] = false;
+        }
+        UserPreference::forUser()->set(self::CANVAS_PANELS_PREFERENCE, $preferences);
+
+        return [];
+    }
+
+    /** Toggles a navigator tool, opening the outer navigator first when needed. */
+    public function onToggleCanvasNavigatorTool(): array
+    {
+        $section = (string) request()->input('section');
+        if (!in_array($section, ['pages', 'outline'], true)) {
+            throw new \ApplicationException('Neplatný nástroj navigátoru Canvasu.');
+        }
+
+        $preferences = $this->canvasPanelPreferences();
+        if ($preferences['navigator']) {
+            $preferences['navigator'] = false;
+            $preferences[$section] = false;
+        }
+        else {
+            $preferences[$section] = !$preferences[$section];
+        }
         UserPreference::forUser()->set(self::CANVAS_PANELS_PREFERENCE, $preferences);
 
         return [];
@@ -420,7 +462,18 @@ class BuilderPages extends Controller
         $data = $this->normalizeRelationSaveData($widget->getSaveData());
 
         if ($field === 'sections' && $model instanceof Section) {
-            $result = $this->runPageCommand($page, 'section.update', ['uuid' => $model->uuid, 'changes' => $data]);
+            if ($model->type === 'columns') {
+                $result = $this->runPageCommand($page, 'columns.configure', [
+                    'uuid' => $model->uuid,
+                    'ratio' => data_get($data, 'content.ratio', data_get($model->content, 'ratio', '1:1')),
+                    'layout' => (array) ($data['layout'] ?? []),
+                    'zones' => (array) request()->input('columns_zones', []),
+                    'changes' => $data,
+                ]);
+            }
+            else {
+                $result = $this->runPageCommand($page, 'section.update', ['uuid' => $model->uuid, 'changes' => $data]);
+            }
         }
         elseif ($field === 'items' && $model instanceof SectionItem) {
             $result = $this->runPageCommand($page, 'item.update', ['uuid' => $model->uuid, 'changes' => $data]);
@@ -564,6 +617,7 @@ class BuilderPages extends Controller
             'carousel_options' => ['_carousel_appearance', '_carousel_playback', 'content[autoplay]', 'content[playback_control]', 'content[autoplay_delay]', 'content[navigation]', 'content[pagination]', 'content[overlay]', 'content[position]'],
             'cta' => ['content[cta_label]', 'content[cta_url]'],
             'columns' => ['content[columns]'], 'embed' => ['content[embed]'],
+            'columns_layout' => ['_columns_layout', 'content[ratio]', 'layout[columns_gap]', 'layout[tablet_behavior]', 'layout[mobile_order]', 'layout[full_padding]', '_columns_zones'],
             'media' => ['media'], 'items' => ['items'],
         ];
         $specializedFields = [
@@ -574,7 +628,7 @@ class BuilderPages extends Controller
             '_faq_group', 'faq_group', '_faq_actions',
             '_gallery_source', 'gallery', '_gallery_actions',
             'content[gallery_columns]',
-            'content[embed]', 'media', 'items',
+            'content[embed]', '_columns_layout', 'content[ratio]', 'layout[columns_gap]', 'layout[tablet_behavior]', 'layout[mobile_order]', 'layout[full_padding]', '_columns_zones', 'media', 'items',
         ];
         $allowedFields = $this->expandFieldGroups(SectionRegistry::instance()->sectionFields($type), $fieldMap);
 
@@ -583,6 +637,11 @@ class BuilderPages extends Controller
         }
 
         $this->pruneStyleFields($widget, SectionRegistry::instance()->sectionStyleFields($type));
+
+        if (!SectionRegistry::instance()->supportsFillHeight($type)
+            || $widget->model->container?->kind !== SectionContainer::KIND_ZONE) {
+            $widget->removeField('layout[fill_height]');
+        }
 
         if ($type === 'carousel' && ($positionField = $widget->getField('content[position]'))) {
             $positionField->tab = 'Prezentace';
@@ -900,13 +959,17 @@ class BuilderPages extends Controller
             throw new \ApplicationException('Nemáte oprávnění vložit tento typ sekce.');
         }
         $requiresSource = in_array($type, ['carousel', 'accordion', 'gallery'], true);
-        $result = $this->runPageCommand($page, 'section.create', [
+        $payload = [
             'type' => $type,
             'title' => $definition['label'],
             'position' => max(1, (int) request()->input('builder_position', $page->sections()->count() + 1)),
             // Relational sections need their content source selected before publication.
             'is_published' => !$requiresSource,
-        ]);
+        ];
+        if ($containerUuid = trim((string) request()->input('target_container_uuid'))) {
+            $payload['target_container_uuid'] = $containerUuid;
+        }
+        $result = $this->runPageCommand($page, 'section.create', $payload);
         $this->announceCommandResult($result);
         Flash::success($requiresSource
             ? 'Sekce byla přidána jako skrytá. Vyberte její obsahový zdroj a potom ji publikujte.'
@@ -959,6 +1022,58 @@ class BuilderPages extends Controller
         return $this->commandRefresh($page);
     }
 
+    /** Moves a section to an ordinal position in the root or a Columns zone. */
+    public function onCanvasMoveSection(): array
+    {
+        $page = $this->pageForRequest();
+        $result = $this->runPageCommand($page, 'section.move', [
+            'uuid' => (string) request()->input('section_uuid'),
+            'target_container_uuid' => (string) request()->input('target_container_uuid'),
+            'position' => max(1, (int) request()->input('target_position', 1)),
+        ]);
+        $this->announceCommandResult($result);
+        Flash::success('Sekce byla přesunuta.');
+
+        return $this->commandRefresh($page, (string) $result->data['section_uuid']);
+    }
+
+    public function onOpenSectionMove()
+    {
+        $page = $this->pageForRequest();
+        $section = Section::where('page_id', $page->id)->findOrFail((int) request()->input('section_id'));
+        $registry = SectionRegistry::instance();
+        $targets = $page->section_containers()->with('columns_section')->orderBy('kind')->orderBy('sort_order')->get()
+            ->filter(function(SectionContainer $container) use ($section, $registry): bool {
+                if ($container->kind === SectionContainer::KIND_ROOT) {
+                    return true;
+                }
+                return $section->type !== 'columns'
+                    && $registry->allowedInColumns($section->type)
+                    && $registry->minimumWidthUnits($section->type) <= (int) $container->width_units;
+            })->map(fn(SectionContainer $container): array => [
+                'uuid' => $container->uuid,
+                'label' => $container->kind === SectionContainer::KIND_ROOT
+                    ? 'Hlavní úroveň'
+                    : ($container->columns_section?->title ?: 'Sloupce').' › '.($container->title ?: 'Zóna'),
+            ])->values()->all();
+
+        return $this->makePartial('move_section', compact('section', 'targets'));
+    }
+
+    public function onMoveSectionFromTable(): array
+    {
+        $page = $this->pageForRequest();
+        $result = $this->runPageCommand($page, 'section.move', [
+            'uuid' => (string) request()->input('section_uuid'),
+            'target_container_uuid' => (string) request()->input('target_container_uuid'),
+            'position' => max(1, (int) request()->input('target_position', 1)),
+        ]);
+        $this->announceCommandResult($result);
+        Flash::success('Sekce byla přesunuta.');
+
+        return $this->commandRefresh($page, (string) request()->input('section_uuid'));
+    }
+
     /** Duplicates the selected Canvas section and keeps the duplicate selected. */
     public function onCanvasDuplicateSection(): array
     {
@@ -998,9 +1113,16 @@ class BuilderPages extends Controller
         $section = Section::where('page_id', $page->id)
             ->where('uuid', (string) request()->input('section_uuid'))
             ->firstOrFail();
-        $result = $this->runPageCommand($page, 'section.delete', ['uuid' => $section->uuid]);
+        $result = $this->runPageCommand($page, 'section.delete', [
+            'uuid' => $section->uuid,
+            'mode' => $section->type === 'columns' ? (string) request()->input('delete_mode', 'unwrap') : null,
+        ]);
         $this->announceCommandResult($result);
-        Flash::success('Sekce byla odstraněna. Lze ji vrátit akcí Zpět.');
+        Flash::success($section->type === 'columns'
+            ? (request()->input('delete_mode', 'unwrap') === 'destructive'
+                ? 'Sloupce včetně obsahu byly odstraněny. Změnu lze vrátit akcí Zpět.'
+                : 'Sloupce byly odstraněny a jejich obsah bezpečně rozbalen. Změnu lze vrátit akcí Zpět.')
+            : 'Sekce byla odstraněna. Lze ji vrátit akcí Zpět.');
 
         return $this->commandRefresh($page, '');
     }
@@ -1105,14 +1227,17 @@ class BuilderPages extends Controller
     private function canvasSections(BuilderPage $page): array
     {
         $allowed = array_keys(SectionRegistry::instance()->optionsForBackendUser());
-        $sections = Section::with(['items.media.asset', 'media.asset', 'slider', 'faq_group', 'gallery.images'])
+        $sections = Section::with(['container.columns_section', 'items.media.asset', 'media.asset', 'slider.slides', 'faq_group.questions', 'gallery.images'])
             ->where('page_id', $page->id)
             ->whereIn('type', $allowed)
             ->orderBy('sort_order')
             ->get();
+        $page->setRelation('sections', $sections);
+        $page->setRelation('section_containers', $page->section_containers()->with('columns_section')->get());
+        $rootSections = app(PageStructureService::class)->prepare($page, false);
         $presenter = app(CanvasSectionPresenter::class);
 
-        return $sections->map(fn(Section $section) => $presenter->present($section))->all();
+        return $rootSections->map(fn(Section $section) => $presenter->present($section))->all();
     }
 
     private function canvasPageTree(BuilderPage $currentPage): array
@@ -1152,7 +1277,12 @@ class BuilderPages extends Controller
         foreach ($registry->optionsForBackendUser() as $type => $label) {
             $category = $registry->category($type);
             $groups[$category]['label'] = $labels[$category] ?? 'Další';
-            $groups[$category]['types'][] = ['type' => $type, 'label' => $label];
+            $groups[$category]['types'][] = [
+                'type' => $type,
+                'label' => $label,
+                'allowed_in_columns' => $registry->allowedInColumns($type),
+                'minimum_width_units' => $registry->minimumWidthUnits($type),
+            ];
         }
 
         return array_values($groups);

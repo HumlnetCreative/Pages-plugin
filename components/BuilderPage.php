@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\View;
 use Backend\Facades\BackendAuth;
 use HumlnetCreative\Pages\Services\PagePublicationService;
+use HumlnetCreative\Pages\Services\PageStructureService;
 
 class BuilderPage extends ComponentBase
 {
@@ -42,7 +43,7 @@ class BuilderPage extends ComponentBase
         if (!$this->record) {
             return $this->notFoundResponse();
         }
-        $this->sections = $this->record->sections->sortBy('sort_order')->all();
+        $this->sections = app(PageStructureService::class)->prepare($this->record)->all();
         $this->page['builderRecord'] = $this->record;
         $this->page['builderSections'] = $this->sections;
         $this->page['builderFaqSchemaJson'] = $this->buildFaqSchemaJson();
@@ -63,7 +64,9 @@ class BuilderPage extends ComponentBase
     private function loadWorkingCopy(string $slug): ?BuilderPageModel
     {
         $query = BuilderPageModel::with([
+            'section_containers.columns_section',
             'sections' => fn($query) => $query->where('is_published', true)->with([
+                'container.columns_section',
                 'media.asset',
                 'slider',
                 'faq_group.questions',
@@ -78,7 +81,7 @@ class BuilderPage extends ComponentBase
 
     protected function buildFaqSchemaJson(): ?string
     {
-        $questions = collect($this->sections)
+        $questions = collect($this->record->sections)
             ->where('type', 'accordion')
             ->flatMap(fn($section) => $section->faq_items)
             ->unique(fn($question) => $question->blueprint_uuid.'-'.$question->id)

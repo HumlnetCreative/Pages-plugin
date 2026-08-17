@@ -3,6 +3,7 @@
 use HumlnetCreative\Pages\Models\BuilderPage;
 use HumlnetCreative\Pages\Models\Section;
 use HumlnetCreative\Pages\Models\SectionItem;
+use HumlnetCreative\Pages\Models\SectionContainer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use October\Rain\Parse\Yaml;
@@ -55,15 +56,23 @@ class SiteBlueprintImporter
             'meta_title' => $data['meta_title'] ?? null, 'meta_description' => $data['meta_description'] ?? null,
         ]);
         foreach (($data['sections'] ?? []) as $index => $sectionData) {
+            $this->createManifestSection($page, $page->root_container, $sectionData, $index + 1, $sliders, $faqGroups, $galleries);
+        }
+        foreach (($data['children'] ?? []) as $child) { $this->createPage($child, $siteId, $page, $sliders, $faqGroups, $galleries); }
+        return $page;
+    }
+
+    protected function createManifestSection(BuilderPage $page, SectionContainer $container, array $sectionData, int $position, array $sliders, array $faqGroups, array $galleries): Section
+    {
             $defaults = SectionRegistry::instance()->defaults($sectionData['type']);
             $section = Section::create([
-                'uuid' => (string) Str::uuid(), 'page_id' => $page->id, 'type' => $sectionData['type'],
+                'uuid' => (string) Str::uuid(), 'page_id' => $page->id, 'container_id' => $container->id, 'type' => $sectionData['type'],
                 'slider_id' => isset($sectionData['slider']) ? ($sliders[$sectionData['slider']]->id ?? null) : null,
                 'faq_group_id' => isset($sectionData['faq_group']) ? ($faqGroups[$sectionData['faq_group']]->id ?? null) : null,
                 'gallery_id' => isset($sectionData['gallery']) ? ($galleries[$sectionData['gallery']]->id ?? null) : null,
                 'title' => $sectionData['title'] ?? null,
                 // A gallery skeleton has no images yet and becomes publishable after editorial completion.
-                'is_published' => $sectionData['type'] === 'gallery' ? false : (bool) ($sectionData['published'] ?? true), 'sort_order' => $index,
+                'is_published' => $sectionData['type'] === 'gallery' ? false : (bool) ($sectionData['published'] ?? true), 'sort_order' => $position,
                 'layout' => array_replace_recursive($defaults['layout'], $sectionData['layout'] ?? []),
                 'style' => array_replace_recursive($defaults['style'], $sectionData['style'] ?? []),
                 'content' => array_replace_recursive($defaults['content'], $sectionData['content'] ?? []),
@@ -71,13 +80,32 @@ class SiteBlueprintImporter
             foreach (($sectionData['items'] ?? []) as $itemIndex => $itemData) {
                 SectionItem::create([
                     'uuid' => (string) Str::uuid(), 'section_id' => $section->id,
-                    'is_published' => (bool) ($itemData['published'] ?? true), 'sort_order' => $itemIndex,
+                    'is_published' => (bool) ($itemData['published'] ?? true), 'sort_order' => $itemIndex + 1,
                     'content' => $itemData['content'] ?? [], 'style' => $itemData['style'] ?? [],
                 ]);
             }
-        }
-        foreach (($data['children'] ?? []) as $child) { $this->createPage($child, $siteId, $page, $sliders, $faqGroups, $galleries); }
-        return $page;
+            if ($section->type === 'columns') {
+                $units = ColumnsLayout::units((string) data_get($section->content, 'ratio', '1:1'));
+                foreach (array_values((array) ($sectionData['zones'] ?? [])) as $zoneIndex => $zoneData) {
+                    $zone = SectionContainer::create([
+                        'page_id' => $page->id,
+                        'parent_section_id' => $section->id,
+                        'kind' => SectionContainer::KIND_ZONE,
+                        'title' => $zoneData['title'] ?? 'Zóna '.($zoneIndex + 1),
+                        'sort_order' => $zoneIndex + 1,
+                        'width_units' => $units[$zoneIndex],
+                        'vertical_align' => $zoneData['vertical_align'] ?? 'top',
+                        'block_spacing' => $zoneData['block_spacing'] ?? 'standard',
+                        'style' => $zoneData['style'] ?? [],
+                    ]);
+                    foreach (array_values((array) ($zoneData['sections'] ?? [])) as $nestedIndex => $nested) {
+                        $this->createManifestSection($page, $zone, $nested, $nestedIndex + 1, $sliders, $faqGroups, $galleries);
+                    }
+                }
+                ColumnsLayout::validateZones($section);
+            }
+
+            return $section;
     }
 
     protected function createSliders(array $definitions, ?int $siteId): array
@@ -279,6 +307,7 @@ class SiteBlueprintImporter
                 if (!is_array($sections) || !array_is_list($sections)) {
                     throw new \ApplicationException('Hodnota sections musí být YAML seznam.');
                 }
+                $validateSections = function(array $sections, ?int $zoneWidth = null) use (&$validateSections, $registry, $sliderRefs, $faqRefs, $galleryRefs): void {
                 foreach ($sections as $section) {
                     if (!is_array($section) || empty($section['type']) || !$registry->has($section['type'])) {
                         $type = is_array($section) ? ($section['type'] ?? '(chybí)') : '(neplatná hodnota)';
@@ -286,6 +315,14 @@ class SiteBlueprintImporter
                     }
                     if (isset($section['published']) && !is_bool($section['published'])) {
                         throw new \ApplicationException("Hodnota published sekce {$section['type']} musí být true nebo false.");
+                    }
+                    if ($zoneWidth !== null) {
+                        if ($section['type'] === 'columns' || !$registry->allowedInColumns($section['type'])) {
+                            throw new \ApplicationException("Sekci {$section['type']} nelze vložit do zóny Sloupců.");
+                        }
+                        if ($registry->minimumWidthUnits($section['type']) > $zoneWidth) {
+                            throw new \ApplicationException("Sekce {$section['type']} vyžaduje širší zónu Sloupců.");
+                        }
                     }
                     if ($section['type'] === 'carousel' && (empty($section['slider']) || !isset($sliderRefs[$section['slider']]))) {
                         throw new \ApplicationException('Každá sekce carousel musí odkazovat na existující Slider pomocí slider: ref.');
@@ -321,7 +358,26 @@ class SiteBlueprintImporter
                             throw new \ApplicationException("{$mapping} sekce {$section['type']} musí být mapování.");
                         }
                     }
+                    if ($section['type'] === 'columns') {
+                        $ratio = (string) data_get($section, 'content.ratio', '1:1');
+                        $units = ColumnsLayout::units($ratio);
+                        $zones = $section['zones'] ?? [];
+                        if (!is_array($zones) || !array_is_list($zones) || count($zones) !== count($units)) {
+                            throw new \ApplicationException("Sloupce {$ratio} musí obsahovat přesně ".count($units).' zón.');
+                        }
+                        foreach ($zones as $zoneIndex => $zone) {
+                            if (!is_array($zone) || !is_array($zone['sections'] ?? null) || !array_is_list($zone['sections'])) {
+                                throw new \ApplicationException('Každá zóna Sloupců musí obsahovat seznam sections.');
+                            }
+                            if (isset($zone['vertical_align']) && !in_array($zone['vertical_align'], ['top', 'center', 'bottom'], true)) {
+                                throw new \ApplicationException('Zóna Sloupců má neplatné svislé zarovnání.');
+                            }
+                            $validateSections($zone['sections'], $units[$zoneIndex]);
+                        }
+                    }
                 }
+                };
+                $validateSections($sections);
                 if (!empty($page['children'])) {
                     if (!is_array($page['children']) || !array_is_list($page['children'])) {
                         throw new \ApplicationException('Hodnota children musí být YAML seznam.');

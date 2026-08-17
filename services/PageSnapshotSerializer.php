@@ -16,8 +16,26 @@ final class PageSnapshotSerializer
     {
         $page->loadMissing('parent');
         $assets = [];
+        $containerModels = $page->section_containers()
+            ->with('columns_section')
+            ->orderBy('kind')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+        $containers = $containerModels->map(fn($container): array => [
+            'uuid' => (string) $container->uuid,
+            'kind' => (string) $container->kind,
+            'parent_section_uuid' => $container->columns_section?->uuid,
+            'title' => $container->title,
+            'sort_order' => (int) $container->sort_order,
+            'width_units' => (int) $container->width_units,
+            'vertical_align' => (string) $container->vertical_align,
+            'block_spacing' => (string) $container->block_spacing,
+            'style' => $container->style ?: [],
+        ])->all();
         $sectionModels = $page->sections()
-            ->with(['items.media.asset', 'media.asset', 'slider', 'faq_group', 'gallery'])
+            ->with(['container', 'items.media.asset', 'media.asset', 'slider', 'faq_group', 'gallery'])
+            ->orderBy('container_id')
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
@@ -45,6 +63,7 @@ final class PageSnapshotSerializer
                 'meta_title' => $page->meta_title,
                 'meta_description' => $page->meta_description,
             ],
+            $containers,
             $sections,
             array_values($assets),
         );
@@ -63,6 +82,7 @@ final class PageSnapshotSerializer
     {
         return [
             'uuid' => (string) $section->uuid,
+            'container_uuid' => (string) $section->container?->uuid,
             'type' => (string) $section->type,
             'shared' => [
                 'slider' => $this->reference($section->slider, $section->slider_id),

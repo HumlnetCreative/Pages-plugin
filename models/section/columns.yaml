@@ -4,6 +4,8 @@ columns:
         searchable: true
     type_label:
         label: Typ
+    container_label:
+        label: Umístění
     is_published:
         label: Viditelná
         type: switch

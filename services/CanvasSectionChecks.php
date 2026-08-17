@@ -38,6 +38,14 @@ final class CanvasSectionChecks
         elseif ($section->type === 'cards' && $section->items->isEmpty()) {
             $issues[] = 'Sekce neobsahuje žádnou kartu.';
         }
+        elseif ($section->type === 'columns') {
+            try {
+                ColumnsLayout::validateZones($section);
+            }
+            catch (\ValidationException $exception) {
+                $issues[] = $exception->getMessage();
+            }
+        }
 
         $thumbnailSlot = SectionRegistry::instance()->wireframe($section->type)['thumbnail'];
         if ($thumbnailSlot && !$section->media->firstWhere('slot', $thumbnailSlot)) {

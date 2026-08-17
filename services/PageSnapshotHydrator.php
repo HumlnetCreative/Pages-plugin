@@ -7,6 +7,7 @@ use HumlnetCreative\Pages\Models\MediaAsset;
 use HumlnetCreative\Pages\Models\MediaUse;
 use HumlnetCreative\Pages\Models\Section;
 use HumlnetCreative\Pages\Models\SectionItem;
+use HumlnetCreative\Pages\Models\SectionContainer;
 use HumlnetCreative\Pages\Models\SliderEntry;
 use Illuminate\Support\Collection;
 use JsonException;
@@ -42,7 +43,26 @@ final class PageSnapshotHydrator
             $assets[$assetData['uuid']] = $asset;
         }
 
+        $containers = [];
+        foreach ($snapshot->containers as $containerData) {
+            $container = new SectionContainer();
+            $container->setRawAttributes([
+                'uuid' => $containerData['uuid'],
+                'page_id' => $pageId,
+                'kind' => $containerData['kind'],
+                'title' => $containerData['title'] ?? null,
+                'sort_order' => (int) ($containerData['sort_order'] ?? 0),
+                'width_units' => (int) ($containerData['width_units'] ?? 1),
+                'vertical_align' => $containerData['vertical_align'] ?? 'top',
+                'block_spacing' => $containerData['block_spacing'] ?? 'standard',
+                'style' => $this->json($containerData['style'] ?? []),
+            ], true);
+            $container->exists = true;
+            $containers[$containerData['uuid']] = $container;
+        }
+
         $sections = [];
+        $sectionsByUuid = [];
         foreach ($snapshot->sections as $sectionData) {
             $section = new Section();
             $shared = (array) ($sectionData['shared'] ?? []);
@@ -60,6 +80,11 @@ final class PageSnapshotHydrator
                 'content' => $this->json($sectionData['content'] ?? []),
             ], true);
             $section->exists = true;
+            $container = $containers[$sectionData['container_uuid']] ?? null;
+            if (!$container) {
+                throw new UnexpectedValueException("Snapshot odkazuje na chybějící kontejner {$sectionData['container_uuid']}.");
+            }
+            $section->setRelation('container', $container);
             $section->setRelation('media', $this->mediaUses((array) ($sectionData['media'] ?? []), $assets));
 
             $items = [];
@@ -81,6 +106,25 @@ final class PageSnapshotHydrator
             $section->setRelation('items', new Collection($items));
             $this->hydrateSharedRelations($section);
             $sections[] = $section;
+            $sectionsByUuid[$sectionData['uuid']] = $section;
+        }
+
+        foreach ($snapshot->containers as $containerData) {
+            $container = $containers[$containerData['uuid']];
+            $containerSections = collect($sections)->filter(
+                fn(Section $section): bool => $section->container?->uuid === $container->uuid
+            )->sortBy('sort_order')->values();
+            $container->setRelation('sections', $containerSections);
+            if ($container->kind === SectionContainer::KIND_ZONE) {
+                $parent = $sectionsByUuid[$containerData['parent_section_uuid']] ?? null;
+                $container->setRelation('columns_section', $parent);
+            }
+        }
+        foreach ($sections as $section) {
+            $section->setRelation('zones', collect($containers)->filter(
+                fn(SectionContainer $container): bool => $container->kind === SectionContainer::KIND_ZONE
+                    && $container->columns_section?->uuid === $section->uuid
+            )->sortBy('sort_order')->values());
         }
 
         $pageData = $snapshot->page;
@@ -102,8 +146,12 @@ final class PageSnapshotHydrator
         ], true);
         $page->exists = true;
         $page->setRelation('sections', new Collection($sections));
+        $page->setRelation('section_containers', new Collection(array_values($containers)));
         foreach ($sections as $section) {
             $section->setRelation('page', $page);
+        }
+        foreach ($containers as $container) {
+            $container->setRelation('page', $page);
         }
 
         return $page;

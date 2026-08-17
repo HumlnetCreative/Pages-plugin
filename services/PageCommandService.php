@@ -10,6 +10,7 @@ use HumlnetCreative\Pages\Models\MediaAsset;
 use HumlnetCreative\Pages\Models\MediaUse;
 use HumlnetCreative\Pages\Models\Section;
 use HumlnetCreative\Pages\Models\SectionItem;
+use HumlnetCreative\Pages\Models\SectionContainer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -154,8 +155,12 @@ final class PageCommandService
             'section.restore' => $this->restoreSection($page, $command->payload),
             'section.restore_many' => $this->restoreSections($page, $command->payload),
             'section.reorder' => $this->reorderSections($page, $command->payload),
+            'section.move' => $this->moveSection($page, $command->payload),
             'section.duplicate' => $this->duplicateSection($page, $command->payload),
             'section.paste' => $this->pasteSection($page, $command->payload),
+            'columns.restore' => $this->restoreColumns($page, $command->payload),
+            'columns.configure' => $this->configureColumns($page, $command->payload),
+            'columns.restore_configuration' => $this->restoreColumnsConfiguration($page, $command->payload),
             'item.create' => $this->createItem($page, $command->payload),
             'item.update' => $this->updateItem($page, $command->payload),
             'item.visibility' => $this->visibilityItem($page, $command->payload),
@@ -175,7 +180,7 @@ final class PageCommandService
         $section = null;
         $item = null;
         $uuid = (string) ($command->payload['uuid'] ?? '');
-        if (str_starts_with($command->name, 'section.') && $uuid !== '') {
+        if ((str_starts_with($command->name, 'section.') || str_starts_with($command->name, 'columns.')) && $uuid !== '') {
             $section = Section::withTrashed()->where('page_id', $page->id)->where('uuid', $uuid)->first();
         }
         elseif (str_starts_with($command->name, 'item.') && $uuid !== '') {
@@ -191,8 +196,10 @@ final class PageCommandService
             'section.delete' => 'Odstranit sekci'.$sectionName,
             'section.delete_many' => 'Odstranit sekce'.($count ? ' ('.$count.')' : ''),
             'section.reorder' => 'Změnit pořadí sekcí',
+            'section.move' => 'Přesunout sekci'.$sectionName,
             'section.duplicate' => 'Duplikovat sekci'.$sectionName,
             'section.paste' => 'Vložit zkopírovanou sekci',
+            'columns.configure', 'columns.restore_configuration' => 'Upravit rozložení Sloupců'.$sectionName,
             'item.create' => 'Přidat položku do sekce'.$sectionName,
             'item.update', 'item.visibility' => 'Upravit položku v sekci'.$sectionName,
             'item.delete' => 'Odstranit položku ze sekce'.$sectionName,
@@ -229,7 +236,7 @@ final class PageCommandService
         app(PageEditLockService::class)->assertWritable($page, $user, app(EditorSessionService::class)->id());
 
         $operationPermission = match (true) {
-            str_contains($command->name, 'reorder'), $command->name === 'item.move' => 'humlnetcreative.pages.structure.reorder',
+            str_contains($command->name, 'reorder'), in_array($command->name, ['item.move', 'section.move'], true) => 'humlnetcreative.pages.structure.reorder',
             in_array($command->name, ['section.duplicate', 'item.duplicate'], true) => 'humlnetcreative.pages.structure.duplicate',
             in_array($command->name, ['section.copy', 'section.paste'], true) => 'humlnetcreative.pages.structure.copy',
             str_ends_with($command->name, '.create'), str_contains($command->name, '.delete'), str_contains($command->name, '.restore') => 'humlnetcreative.pages.structure.create_delete',
@@ -241,6 +248,10 @@ final class PageCommandService
         $changes = (array) ($command->payload['changes'] ?? []);
         if (array_intersect(['layout', 'style'], array_keys($changes))) {
             $this->assertPermission($user, 'humlnetcreative.pages.structure.appearance');
+        }
+        if (str_starts_with($command->name, 'columns.')) {
+            $this->assertPermission($user, 'humlnetcreative.pages.structure.appearance');
+            $this->assertPermission($user, 'humlnetcreative.pages.structure.reorder');
         }
         $type = $this->commandSectionType($page, $command);
         if ($type && SectionRegistry::instance()->has($type)) {
@@ -264,12 +275,14 @@ final class PageCommandService
             throw new \ValidationException(['type' => 'Neznámý typ sekce.']);
         }
         $defaults = SectionRegistry::instance()->defaults($type);
-        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
-        $position = $this->position($page->sections(), $payload);
-        $this->makeRoom('humlnetcreative_pages_sections', 'page_id', $page->id, $position);
+        $container = $this->targetContainer($page, $payload);
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'container_id', $container->id);
+        $position = $this->position($container->sections(), $payload);
+        $this->makeRoom('humlnetcreative_pages_sections', 'container_id', $container->id, $position);
         $section = Section::create([
             'uuid' => $payload['uuid'] ?? (string) Str::uuid(),
             'page_id' => $page->id,
+            'container_id' => $container->id,
             'type' => $type,
             'title' => $payload['title'] ?? SectionRegistry::instance()->definition($type)['label'],
             'is_published' => (bool) ($payload['is_published'] ?? !in_array($type, ['carousel', 'accordion', 'gallery'], true)),
@@ -281,8 +294,11 @@ final class PageCommandService
             'faq_group_id' => $payload['faq_group_id'] ?? null,
             'gallery_id' => $payload['gallery_id'] ?? null,
         ]);
+        if ($type === 'columns') {
+            $this->createColumnZones($section, ColumnsLayout::units((string) data_get($section->content, 'ratio', '1:1')));
+        }
 
-        return [['section_uuid' => $section->uuid], new PageCommand('section.delete', $page->id, 0, ['uuid' => $section->uuid])];
+        return [['section_uuid' => $section->uuid], new PageCommand('section.delete', $page->id, 0, ['uuid' => $section->uuid, 'mode' => 'destructive'])];
     }
 
     private function updateSection(BuilderPage $page, array $payload): array
@@ -306,22 +322,30 @@ final class PageCommandService
     private function deleteSection(BuilderPage $page, array $payload): array
     {
         $section = $this->section($page, (string) ($payload['uuid'] ?? ''));
-        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
+        if ($section->type === 'columns') {
+            return $this->deleteColumns($page, $section, (string) ($payload['mode'] ?? 'unwrap'));
+        }
+        $container = $section->container;
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'container_id', $container->id);
         $section->refresh();
         $position = (int) $section->sort_order;
         $section->delete();
-        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'container_id', $container->id);
 
-        return [['section_uuid' => $section->uuid], new PageCommand('section.restore', $page->id, 0, ['uuid' => $section->uuid, 'position' => $position])];
+        return [['section_uuid' => $section->uuid], new PageCommand('section.restore', $page->id, 0, [
+            'uuid' => $section->uuid, 'container_uuid' => $container->uuid, 'position' => $position,
+        ])];
     }
 
     private function restoreSection(BuilderPage $page, array $payload): array
     {
         $section = Section::withTrashed()->where('page_id', $page->id)->where('uuid', $payload['uuid'] ?? '')->firstOrFail();
-        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
-        $position = $this->position($page->sections(), $payload);
-        $this->makeRoom('humlnetcreative_pages_sections', 'page_id', $page->id, $position);
+        $container = $this->targetContainer($page, $payload);
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'container_id', $container->id);
+        $position = $this->position($container->sections(), $payload);
+        $this->makeRoom('humlnetcreative_pages_sections', 'container_id', $container->id, $position);
         $section->restore();
+        $section->container_id = $container->id;
         $section->sort_order = $position;
         $section->save();
 
@@ -330,23 +354,34 @@ final class PageCommandService
 
     private function deleteSections(BuilderPage $page, array $payload): array
     {
+        $selectedUuids = array_values(array_unique((array) ($payload['uuids'] ?? [])));
+        $selected = Section::where('page_id', $page->id)->whereIn('uuid', $selectedUuids)->with('zones.sections')->get();
+        foreach ($selected->where('type', 'columns') as $columns) {
+            $nestedUuids = $columns->zones->flatMap->sections->pluck('uuid')->all();
+            if (array_intersect($selectedUuids, $nestedUuids)) {
+                throw new \ValidationException(['sections' => 'Sloupce a blok uvnitř nich nelze odstranit v jednom hromadném výběru. Vyberte pouze Sloupce; jejich obsah se bezpečně rozbalí.']);
+            }
+        }
         $restores = [];
-        foreach (array_values(array_unique((array) ($payload['uuids'] ?? []))) as $uuid) {
+        foreach ($selectedUuids as $uuid) {
             [, $inverse] = $this->deleteSection($page, ['uuid' => $uuid]);
-            $restores[] = $inverse->payload;
+            $restores[] = ['name' => $inverse->name, 'payload' => $inverse->payload];
         }
         if (!$restores) {
             throw new \ValidationException(['uuids' => 'Vyberte alespoň jednu sekci.']);
         }
 
-        return [['section_uuids' => array_column($restores, 'uuid')], new PageCommand('section.restore_many', $page->id, 0, ['records' => $restores])];
+        return [['section_uuids' => $selectedUuids], new PageCommand('section.restore_many', $page->id, 0, ['records' => $restores])];
     }
 
     private function restoreSections(BuilderPage $page, array $payload): array
     {
         $uuids = [];
         foreach ((array) ($payload['records'] ?? []) as $record) {
-            [$data] = $this->restoreSection($page, (array) $record);
+            $name = $record['name'] ?? 'section.restore';
+            [$data] = $name === 'columns.restore'
+                ? $this->restoreColumns($page, (array) ($record['payload'] ?? []))
+                : $this->restoreSection($page, (array) ($record['payload'] ?? $record));
             $uuids[] = $data['section_uuid'];
         }
 
@@ -355,23 +390,63 @@ final class PageCommandService
 
     private function reorderSections(BuilderPage $page, array $payload): array
     {
+        $container = $this->targetContainer($page, $payload);
         $ordered = array_values((array) ($payload['ordered_uuids'] ?? []));
-        $sections = $page->sections()->orderBy('sort_order')->get();
+        $sections = $container->sections()->orderBy('sort_order')->get();
         $before = $sections->pluck('uuid')->all();
         $this->assertSameUuids($before, $ordered, 'sekcí');
         foreach ($ordered as $index => $uuid) {
-            DB::table('humlnetcreative_pages_sections')->where('page_id', $page->id)->where('uuid', $uuid)->update(['sort_order' => $index + 1]);
+            DB::table('humlnetcreative_pages_sections')->where('container_id', $container->id)->where('uuid', $uuid)->update(['sort_order' => $index + 1]);
         }
 
-        return [['ordered_uuids' => $ordered], new PageCommand('section.reorder', $page->id, 0, ['ordered_uuids' => $before])];
+        return [['ordered_uuids' => $ordered], new PageCommand('section.reorder', $page->id, 0, [
+            'container_uuid' => $container->uuid, 'ordered_uuids' => $before,
+        ])];
+    }
+
+    private function moveSection(BuilderPage $page, array $payload): array
+    {
+        $section = $this->section($page, (string) ($payload['uuid'] ?? ''));
+        if ($section->type === 'columns' && isset($payload['target_container_uuid'])) {
+            $target = $this->targetContainer($page, $payload);
+            if ($target->kind !== SectionContainer::KIND_ROOT) {
+                throw new \ValidationException(['container' => 'Sloupce nelze vnořit do dalších Sloupců.']);
+            }
+        }
+        $source = $section->container;
+        $target = $this->targetContainer($page, $payload);
+        $sourcePosition = (int) $section->sort_order;
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'container_id', $source->id);
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'container_id', $target->id);
+        $targetSections = $target->sections()->orderBy('sort_order')->get()->reject(fn(Section $candidate) => $candidate->id === $section->id)->values();
+        $position = min($targetSections->count() + 1, max(1, (int) ($payload['position'] ?? ($targetSections->count() + 1))));
+
+        if ((int) $source->id !== (int) $target->id) {
+            $section->container_id = $target->id;
+            $section->sort_order = $targetSections->count() + 1;
+            $section->unsetRelation('container');
+            $section->save();
+            $this->normalizeOrders('humlnetcreative_pages_sections', 'container_id', $source->id);
+        }
+        $targetSections->splice($position - 1, 0, [$section]);
+        foreach ($targetSections as $index => $candidate) {
+            DB::table('humlnetcreative_pages_sections')->where('id', $candidate->id)->update(['sort_order' => $index + 1]);
+        }
+
+        return [['section_uuid' => $section->uuid], new PageCommand('section.move', $page->id, 0, [
+            'uuid' => $section->uuid,
+            'target_container_uuid' => $source->uuid,
+            'position' => $sourcePosition,
+        ])];
     }
 
     private function duplicateSection(BuilderPage $page, array $payload): array
     {
         $source = $this->section($page, (string) ($payload['uuid'] ?? ''));
-        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'container_id', $source->container_id);
         $source->refresh();
         $payload['position'] ??= (int) $source->sort_order + 1;
+        $payload['target_container_uuid'] ??= $source->container->uuid;
         $clone = $this->importSection($page, $this->exportSection($source), true, $payload);
 
         return [['section_uuid' => $clone->uuid], new PageCommand('section.delete', $page->id, 0, ['uuid' => $clone->uuid])];
@@ -538,10 +613,11 @@ final class PageCommandService
 
     private function exportSection(Section $section): array
     {
-        $section->loadMissing(['items.media', 'media']);
+        $section->loadMissing(['container', 'items.media', 'media', 'zones.sections.items.media', 'zones.sections.media']);
 
-        return [
+        $data = [
             'uuid' => $section->uuid,
+            'container_uuid' => $section->container?->uuid,
             'type' => $section->type,
             'title' => $section->title,
             'is_published' => (bool) $section->is_published,
@@ -555,6 +631,20 @@ final class PageCommandService
             'media' => $section->media->map(fn(MediaUse $use) => $this->exportMedia($use))->all(),
             'items' => $section->items->map(fn(SectionItem $item) => $this->exportItem($item))->all(),
         ];
+        if ($section->type === 'columns') {
+            $data['zones'] = $section->zones->sortBy('sort_order')->map(fn(SectionContainer $zone): array => [
+                'uuid' => $zone->uuid,
+                'title' => $zone->title,
+                'sort_order' => (int) $zone->sort_order,
+                'width_units' => (int) $zone->width_units,
+                'vertical_align' => $zone->vertical_align,
+                'block_spacing' => $zone->block_spacing,
+                'style' => $zone->style ?: [],
+                'sections' => $zone->sections->sortBy('sort_order')->map(fn(Section $nested) => $this->exportSection($nested))->all(),
+            ])->values()->all();
+        }
+
+        return $data;
     }
 
     private function exportItem(SectionItem $item): array
@@ -588,12 +678,14 @@ final class PageCommandService
 
     private function importSection(BuilderPage $page, array $data, bool $freshUuids, array $payload): Section
     {
-        $this->normalizeOrders('humlnetcreative_pages_sections', 'page_id', $page->id);
-        $position = $this->position($page->sections(), $payload);
-        $this->makeRoom('humlnetcreative_pages_sections', 'page_id', $page->id, $position);
+        $container = $this->targetContainer($page, $payload);
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'container_id', $container->id);
+        $position = $this->position($container->sections(), $payload);
+        $this->makeRoom('humlnetcreative_pages_sections', 'container_id', $container->id, $position);
         $section = Section::create([
             'uuid' => $freshUuids ? (string) Str::uuid() : $data['uuid'],
             'page_id' => $page->id,
+            'container_id' => $container->id,
             'type' => $data['type'],
             'title' => $data['title'],
             'is_published' => $data['is_published'],
@@ -611,8 +703,300 @@ final class PageCommandService
         foreach (array_values($data['items']) as $index => $itemData) {
             $this->importItem($section, $itemData, $freshUuids, ['position' => $index + 1]);
         }
+        if ($section->type === 'columns') {
+            foreach (array_values((array) ($data['zones'] ?? [])) as $zoneIndex => $zoneData) {
+                $zone = SectionContainer::create([
+                    'uuid' => $freshUuids ? (string) Str::uuid() : $zoneData['uuid'],
+                    'page_id' => $page->id,
+                    'parent_section_id' => $section->id,
+                    'kind' => SectionContainer::KIND_ZONE,
+                    'title' => $zoneData['title'] ?? 'Zóna '.($zoneIndex + 1),
+                    'sort_order' => $zoneIndex + 1,
+                    'width_units' => (int) $zoneData['width_units'],
+                    'vertical_align' => $zoneData['vertical_align'] ?? 'top',
+                    'block_spacing' => $zoneData['block_spacing'] ?? 'standard',
+                    'style' => (array) ($zoneData['style'] ?? []),
+                ]);
+                foreach (array_values((array) ($zoneData['sections'] ?? [])) as $nestedIndex => $nestedData) {
+                    $this->importSection($page, $nestedData, $freshUuids, [
+                        'target_container_uuid' => $zone->uuid,
+                        'position' => $nestedIndex + 1,
+                    ]);
+                }
+            }
+            if (!$section->zones()->exists()) {
+                $this->createColumnZones($section, ColumnsLayout::units((string) data_get($section->content, 'ratio', '1:1')));
+            }
+        }
 
         return $section;
+    }
+
+    private function createColumnZones(Section $columns, array $units): void
+    {
+        foreach ($units as $index => $widthUnits) {
+            SectionContainer::create([
+                'page_id' => $columns->page_id,
+                'parent_section_id' => $columns->id,
+                'kind' => SectionContainer::KIND_ZONE,
+                'title' => 'Zóna '.($index + 1),
+                'sort_order' => $index + 1,
+                'width_units' => $widthUnits,
+                'vertical_align' => 'top',
+                'block_spacing' => 'standard',
+                'style' => [],
+            ]);
+        }
+    }
+
+    private function deleteColumns(BuilderPage $page, Section $columns, string $mode): array
+    {
+        if (!in_array($mode, ['unwrap', 'destructive'], true)) {
+            throw new \ValidationException(['mode' => 'Neplatný způsob odstranění Sloupců.']);
+        }
+        $structure = $this->exportSection($columns);
+        $root = $columns->container;
+        if ($root?->kind !== SectionContainer::KIND_ROOT) {
+            throw new \ValidationException(['container' => 'Sloupce musí být na hlavní úrovni.']);
+        }
+        $position = (int) $columns->sort_order;
+        $nested = $columns->zones->sortBy('sort_order')->flatMap(
+            fn(SectionContainer $zone) => $zone->sections->sortBy('sort_order')
+        )->values();
+
+        if ($mode === 'unwrap') {
+            $rootOrder = $root->sections()->orderBy('sort_order')->get()->reject(fn(Section $section) => $section->id === $columns->id);
+            $before = $rootOrder->filter(fn(Section $section) => (int) $section->sort_order < $position);
+            $after = $rootOrder->filter(fn(Section $section) => (int) $section->sort_order > $position);
+            $ordered = $before->concat($nested)->concat($after)->values();
+            foreach ($ordered as $index => $section) {
+                DB::table('humlnetcreative_pages_sections')->where('id', $section->id)->update([
+                    'container_id' => $root->id,
+                    'sort_order' => $index + 1,
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+        else {
+            foreach ($nested as $section) {
+                $section->delete();
+            }
+        }
+        foreach ($columns->zones as $zone) {
+            $zone->delete();
+        }
+        $columns->delete();
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'container_id', $root->id);
+
+        return [['section_uuid' => $columns->uuid, 'unwrapped' => $mode === 'unwrap'], new PageCommand(
+            'columns.restore', $page->id, 0, ['structure' => $structure, 'position' => $position, 'mode' => $mode]
+        )];
+    }
+
+    private function restoreColumns(BuilderPage $page, array $payload): array
+    {
+        $data = (array) ($payload['structure'] ?? []);
+        $columns = Section::withTrashed()->where('page_id', $page->id)->where('uuid', $data['uuid'] ?? '')->firstOrFail();
+        $root = $this->targetContainer($page, ['target_container_uuid' => $data['container_uuid'] ?? null]);
+        $position = $this->position($root->sections(), $payload);
+        $this->makeRoom('humlnetcreative_pages_sections', 'container_id', $root->id, $position);
+        $columns->restore();
+        $columns->container_id = $root->id;
+        $columns->sort_order = $position;
+        $columns->unsetRelation('container');
+        $columns->save();
+
+        foreach (array_values((array) ($data['zones'] ?? [])) as $zoneIndex => $zoneData) {
+            $zone = SectionContainer::withTrashed()->where('uuid', $zoneData['uuid'])->first();
+            if (!$zone) {
+                $zone = new SectionContainer(['uuid' => $zoneData['uuid']]);
+            }
+            $zone->fill([
+                'page_id' => $page->id,
+                'parent_section_id' => $columns->id,
+                'kind' => SectionContainer::KIND_ZONE,
+                'title' => $zoneData['title'] ?? 'Zóna '.($zoneIndex + 1),
+                'sort_order' => $zoneIndex + 1,
+                'width_units' => (int) $zoneData['width_units'],
+                'vertical_align' => $zoneData['vertical_align'] ?? 'top',
+                'block_spacing' => $zoneData['block_spacing'] ?? 'standard',
+                'style' => (array) ($zoneData['style'] ?? []),
+                'deleted_at' => null,
+            ]);
+            $zone->save();
+            foreach (array_values((array) ($zoneData['sections'] ?? [])) as $nestedIndex => $nestedData) {
+                $nested = Section::withTrashed()->where('page_id', $page->id)->where('uuid', $nestedData['uuid'])->firstOrFail();
+                if ($nested->trashed()) {
+                    $nested->restore();
+                }
+                $nested->container_id = $zone->id;
+                $nested->sort_order = $nestedIndex + 1;
+                $nested->unsetRelation('container');
+                $nested->save();
+            }
+        }
+        $this->normalizeOrders('humlnetcreative_pages_sections', 'container_id', $root->id);
+
+        return [['section_uuid' => $columns->uuid], new PageCommand('section.delete', $page->id, 0, [
+            'uuid' => $columns->uuid, 'mode' => $payload['mode'] ?? 'unwrap',
+        ])];
+    }
+
+    private function configureColumns(BuilderPage $page, array $payload): array
+    {
+        $columns = $this->section($page, (string) ($payload['uuid'] ?? ''));
+        if ($columns->type !== 'columns') {
+            throw new \ValidationException(['section' => 'Vybraná sekce není typu Sloupce.']);
+        }
+        $before = $this->columnsConfiguration($columns);
+        $ratio = (string) ($payload['ratio'] ?? data_get($columns->content, 'ratio', '1:1'));
+        $units = ColumnsLayout::units($ratio);
+        $zones = $columns->zones()->with('sections')->orderBy('sort_order')->get()->values();
+
+        foreach ($zones as $index => $zone) {
+            $targetIndex = min($index, count($units) - 1);
+            foreach ($zone->sections as $nested) {
+                $this->assertSectionFitsZone($nested, $units[$targetIndex]);
+            }
+        }
+
+        while ($zones->count() < count($units)) {
+            $index = $zones->count();
+            $zones->push(SectionContainer::create([
+                'page_id' => $page->id,
+                'parent_section_id' => $columns->id,
+                'kind' => SectionContainer::KIND_ZONE,
+                'title' => 'Zóna '.($index + 1),
+                'sort_order' => $index + 1,
+                'width_units' => $units[$index],
+                'vertical_align' => 'top',
+                'block_spacing' => 'standard',
+                'style' => [],
+            ]));
+        }
+        if ($zones->count() > count($units)) {
+            $target = $zones[count($units) - 1];
+            $nextOrder = (int) $target->sections()->max('sort_order');
+            foreach ($zones->slice(count($units)) as $removed) {
+                foreach ($removed->sections()->orderBy('sort_order')->get() as $nested) {
+                    DB::table('humlnetcreative_pages_sections')->where('id', $nested->id)->update([
+                        'container_id' => $target->id, 'sort_order' => ++$nextOrder, 'updated_at' => now(),
+                    ]);
+                }
+                $removed->delete();
+            }
+            $zones = $zones->take(count($units))->values();
+        }
+
+        $zonePayloads = array_values((array) ($payload['zones'] ?? []));
+        foreach ($zones as $index => $zone) {
+            $settings = (array) ($zonePayloads[$index] ?? []);
+            $zone->fill([
+                'title' => $settings['title'] ?? $zone->title ?? 'Zóna '.($index + 1),
+                'sort_order' => $index + 1,
+                'width_units' => $units[$index],
+                'vertical_align' => $settings['vertical_align'] ?? $zone->vertical_align ?? 'top',
+                'block_spacing' => $settings['block_spacing'] ?? $zone->block_spacing ?? 'standard',
+                'style' => array_key_exists('style', $settings) ? (array) $settings['style'] : ($zone->style ?: []),
+            ])->save();
+        }
+
+        $allowedLayout = array_intersect_key((array) ($payload['layout'] ?? []), array_flip([
+            'width', 'spacing', 'columns_gap', 'tablet_behavior', 'mobile_order', 'full_padding',
+        ]));
+        $generalChanges = array_intersect_key((array) ($payload['changes'] ?? []), array_flip([
+            'title', 'is_published', 'style',
+        ]));
+        $columns->fill($generalChanges);
+        $columns->content = array_replace($columns->content ?: [], ['ratio' => $ratio]);
+        $columns->layout = array_replace($columns->layout ?: [], $allowedLayout);
+        $columns->save();
+        ColumnsLayout::validateZones($columns->fresh());
+
+        return [['section_uuid' => $columns->uuid], new PageCommand('columns.restore_configuration', $page->id, 0, [
+            'uuid' => $columns->uuid, 'configuration' => $before,
+        ])];
+    }
+
+    private function restoreColumnsConfiguration(BuilderPage $page, array $payload): array
+    {
+        $columns = $this->section($page, (string) ($payload['uuid'] ?? ''));
+        $configuration = (array) ($payload['configuration'] ?? []);
+        $inverse = $this->columnsConfiguration($columns);
+        $wantedZoneIds = [];
+
+        foreach (array_values((array) ($configuration['zones'] ?? [])) as $index => $zoneData) {
+            $zone = SectionContainer::withTrashed()->where('uuid', $zoneData['uuid'])->first();
+            if (!$zone) {
+                $zone = new SectionContainer(['uuid' => $zoneData['uuid']]);
+            }
+            $zone->fill([
+                'page_id' => $page->id,
+                'parent_section_id' => $columns->id,
+                'kind' => SectionContainer::KIND_ZONE,
+                'title' => $zoneData['title'] ?? 'Zóna '.($index + 1),
+                'sort_order' => $index + 1,
+                'width_units' => (int) $zoneData['width_units'],
+                'vertical_align' => $zoneData['vertical_align'] ?? 'top',
+                'block_spacing' => $zoneData['block_spacing'] ?? 'standard',
+                'style' => (array) ($zoneData['style'] ?? []),
+                'deleted_at' => null,
+            ])->save();
+            $wantedZoneIds[] = $zone->id;
+            foreach (array_values((array) ($zoneData['section_uuids'] ?? [])) as $sectionIndex => $uuid) {
+                DB::table('humlnetcreative_pages_sections')->where('page_id', $page->id)->where('uuid', $uuid)->update([
+                    'container_id' => $zone->id, 'sort_order' => $sectionIndex + 1, 'updated_at' => now(),
+                ]);
+            }
+        }
+        $obsolete = $columns->zones()->whereNotIn('id', $wantedZoneIds)->get();
+        foreach ($obsolete as $zone) {
+            $zone->delete();
+        }
+        $columns->content = (array) ($configuration['content'] ?? []);
+        $columns->layout = (array) ($configuration['layout'] ?? []);
+        $columns->title = $configuration['title'] ?? $columns->title;
+        $columns->is_published = (bool) ($configuration['is_published'] ?? $columns->is_published);
+        $columns->style = (array) ($configuration['style'] ?? []);
+        $columns->save();
+        ColumnsLayout::validateZones($columns->fresh());
+
+        return [['section_uuid' => $columns->uuid], new PageCommand('columns.restore_configuration', $page->id, 0, [
+            'uuid' => $columns->uuid, 'configuration' => $inverse,
+        ])];
+    }
+
+    private function columnsConfiguration(Section $columns): array
+    {
+        $columns->loadMissing('zones.sections');
+
+        return [
+            'title' => $columns->title,
+            'is_published' => (bool) $columns->is_published,
+            'style' => $columns->style ?: [],
+            'content' => $columns->content ?: [],
+            'layout' => $columns->layout ?: [],
+            'zones' => $columns->zones->sortBy('sort_order')->map(fn(SectionContainer $zone): array => [
+                'uuid' => $zone->uuid,
+                'title' => $zone->title,
+                'width_units' => (int) $zone->width_units,
+                'vertical_align' => $zone->vertical_align,
+                'block_spacing' => $zone->block_spacing,
+                'style' => $zone->style ?: [],
+                'section_uuids' => $zone->sections->sortBy('sort_order')->pluck('uuid')->all(),
+            ])->values()->all(),
+        ];
+    }
+
+    private function assertSectionFitsZone(Section $section, int $widthUnits): void
+    {
+        $registry = SectionRegistry::instance();
+        if ($section->type === 'columns' || !$registry->allowedInColumns($section->type)) {
+            throw new \ValidationException(['type' => 'Tento typ sekce nelze vložit do Sloupců.']);
+        }
+        if ($registry->minimumWidthUnits($section->type) > $widthUnits) {
+            throw new \ValidationException(['type' => 'Obsah některé zóny vyžaduje větší podíl; před změnou poměru jej přesuňte.']);
+        }
     }
 
     private function importItem(Section $section, array $data, bool $freshUuid, array $payload): SectionItem
@@ -683,6 +1067,21 @@ final class PageCommandService
         return min($maximum, max(1, $position));
     }
 
+    private function targetContainer(BuilderPage $page, array $payload): SectionContainer
+    {
+        $uuid = (string) ($payload['target_container_uuid'] ?? $payload['container_uuid'] ?? '');
+        if ($uuid !== '') {
+            return $page->section_containers()->where('uuid', $uuid)->firstOrFail();
+        }
+
+        $root = $page->root_container;
+        if (!$root) {
+            throw new \UnexpectedValueException('Stránka nemá hlavní kontejner obsahu.');
+        }
+
+        return $root;
+    }
+
     /** Maintains the command API invariant that visible records use ordinal positions 1…N. */
     private function normalizeOrders(string $table, string $foreignKey, int $foreignId): void
     {
@@ -720,6 +1119,10 @@ final class PageCommandService
 
     private function commandSectionType(BuilderPage $page, PageCommand $command): ?string
     {
+        if (str_starts_with($command->name, 'columns.')) {
+            $uuid = $command->payload['uuid'] ?? data_get($command->payload, 'structure.uuid');
+            return Section::withTrashed()->where('page_id', $page->id)->where('uuid', $uuid ?? '')->value('type') ?: 'columns';
+        }
         if ($command->name === 'section.create') {
             return $command->payload['type'] ?? null;
         }

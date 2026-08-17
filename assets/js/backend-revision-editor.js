@@ -56,6 +56,9 @@
         if (canvas?.dataset.catalogPosition) {
             context.options.data.builder_position = Number(canvas.dataset.catalogPosition);
         }
+        if (canvas?.dataset.catalogContainer) {
+            context.options.data.target_container_uuid = canvas.dataset.catalogContainer;
+        }
         context.options.data.active_inspector_tab = activeInspectorTab;
     });
 
@@ -151,6 +154,10 @@
         const viewLabel = editor.querySelector('[data-hucr-view-label]');
         if (viewLabel) {
             viewLabel.textContent = view === 'canvas' ? 'Canvas' : 'Tabulka';
+        }
+        const fullscreenLaunch = editor.querySelector('[data-hucr-fullscreen-launch]');
+        if (fullscreenLaunch) {
+            fullscreenLaunch.hidden = view !== 'canvas';
         }
         button.closest('details')?.removeAttribute('open');
         editor.querySelectorAll('[data-hucr-editor-view]').forEach(function(candidate) {
@@ -298,6 +305,22 @@
         }
     });
 
+    function setCanvasPanelCollapsed(canvas, panel, collapsed) {
+        const className = panel === 'navigator' ? 'is-navigator-collapsed' : 'is-inspector-collapsed';
+        canvas.classList.toggle(className, collapsed);
+        canvas.classList.toggle('is-panels-collapsed',
+            canvas.classList.contains('is-navigator-collapsed') && canvas.classList.contains('is-inspector-collapsed'));
+        const editor = canvas.closest('[data-hucr-builder-editor]') || canvas;
+        editor.querySelectorAll('[data-hucr-toggle-canvas-panel="' + panel + '"]').forEach(function(button) {
+            button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            const icon = button.querySelector('i');
+            if (icon) {
+                const pointsRight = panel === 'navigator' ? collapsed : !collapsed;
+                icon.className = pointsRight ? 'icon-chevron-right' : 'icon-chevron-left';
+            }
+        });
+    }
+
     document.addEventListener('click', function(event) {
         const button = event.target.closest('[data-hucr-toggle-canvas-panel]');
         const canvas = button?.closest('[data-hucr-builder-editor]')?.querySelector('[data-hucr-canvas]');
@@ -307,12 +330,30 @@
         const panel = button.dataset.hucrToggleCanvasPanel;
         const className = panel === 'navigator' ? 'is-navigator-collapsed' : 'is-inspector-collapsed';
         const collapsed = !canvas.classList.contains(className);
-        canvas.classList.toggle(className, collapsed);
-        canvas.classList.toggle('is-panels-collapsed',
-            canvas.classList.contains('is-navigator-collapsed') && canvas.classList.contains('is-inspector-collapsed'));
-        button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        setCanvasPanelCollapsed(canvas, panel, collapsed);
         button.closest('details')?.removeAttribute('open');
     });
+
+    document.addEventListener('click', function(event) {
+        const button = event.target.closest('[data-hucr-navigator-tool]');
+        const canvas = button?.closest('[data-hucr-canvas]');
+        if (!button || !canvas) {
+            return;
+        }
+        const name = button.dataset.hucrNavigatorTool;
+        const section = canvas.querySelector('[data-hucr-left-section="' + name + '"]');
+        const navigatorWasCollapsed = canvas.classList.contains('is-navigator-collapsed');
+        const collapsed = navigatorWasCollapsed ? false : !section?.classList.contains('is-collapsed');
+        if (navigatorWasCollapsed) {
+            setCanvasPanelCollapsed(canvas, 'navigator', false);
+        }
+        if (section) {
+            section.classList.toggle('is-collapsed', collapsed);
+            section.querySelector('[data-hucr-toggle-left-section]')?.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        }
+        button.classList.toggle('is-active', !collapsed);
+        button.setAttribute('aria-pressed', collapsed ? 'false' : 'true');
+    }, true);
 
     document.addEventListener('click', function(event) {
         const button = event.target.closest('[data-hucr-toggle-left-section]');
@@ -323,38 +364,46 @@
         const collapsed = !section.classList.contains('is-collapsed');
         section.classList.toggle('is-collapsed', collapsed);
         button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    });
+        const canvas = section.closest('[data-hucr-canvas]');
+        const railButton = canvas?.querySelector('[data-hucr-navigator-tool="' + button.dataset.hucrToggleLeftSection + '"]');
+        railButton?.classList.toggle('is-active', !collapsed);
+        railButton?.setAttribute('aria-pressed', collapsed ? 'false' : 'true');
+    }, true);
 
     function setCanvasFullscreen(canvas, enabled) {
         canvasFullscreen = enabled;
         canvas.classList.toggle('is-fullscreen', enabled);
         document.body.classList.toggle('hucr-canvas-fullscreen-open', enabled);
-        const button = canvas.querySelector('[data-hucr-toggle-fullscreen]');
-        if (button) {
+        const editor = canvas.closest('[data-hucr-builder-editor]') || canvas;
+        editor.querySelectorAll('[data-hucr-toggle-fullscreen]').forEach(function(button) {
             button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
             button.querySelector('i').className = enabled ? 'icon-compress' : 'icon-expand';
             button.querySelector('span').textContent = enabled ? 'Ukončit celou obrazovku' : 'Celá obrazovka';
-        }
+        });
     }
 
     document.addEventListener('click', function(event) {
         const button = event.target.closest('[data-hucr-toggle-fullscreen]');
-        const canvas = button?.closest('[data-hucr-canvas]');
+        const canvas = button?.closest('[data-hucr-canvas]')
+            || button?.closest('[data-hucr-builder-editor]')?.querySelector('[data-hucr-canvas]');
         if (button && canvas) {
             setCanvasFullscreen(canvas, !canvas.classList.contains('is-fullscreen'));
         }
     });
 
-    function openCatalog(canvas, position) {
+    function openCatalog(canvas, position, containerUuid, widthUnits) {
         const tools = canvas.querySelector('[data-hucr-workspace-tools]');
         const catalog = canvas.querySelector('[data-hucr-catalog]');
         if (!tools || !catalog) {
             return;
         }
         canvas.dataset.catalogPosition = String(position || 1);
+        canvas.dataset.catalogContainer = containerUuid || '';
+        canvas.dataset.catalogWidthUnits = String(widthUnits || 4);
         canvas.classList.add('is-catalog-open');
         canvas.querySelectorAll('.hucr-canvas__insert').forEach(function(insert) {
-            const selected = Number(insert.dataset.position) === Number(canvas.dataset.catalogPosition);
+            const selected = Number(insert.dataset.position) === Number(canvas.dataset.catalogPosition)
+                && (insert.dataset.containerUuid || '') === canvas.dataset.catalogContainer;
             insert.classList.toggle('is-selected', selected);
             insert.setAttribute('aria-pressed', selected ? 'true' : 'false');
         });
@@ -367,7 +416,13 @@
         const search = catalog.querySelector('[data-hucr-catalog-search]');
         if (search) {
             search.value = '';
-            catalog.querySelectorAll('[data-hucr-catalog-item]').forEach(function(item) { item.hidden = false; });
+            catalog.querySelectorAll('[data-hucr-catalog-item]').forEach(function(item) {
+                const inZone = Number(canvas.dataset.catalogWidthUnits) < 4;
+                const allowed = !inZone || (item.dataset.allowedInColumns === 'true'
+                    && Number(item.dataset.minimumWidthUnits || 1) <= Number(canvas.dataset.catalogWidthUnits));
+                item.dataset.contextAllowed = allowed ? 'true' : 'false';
+                item.hidden = !allowed;
+            });
             search.focus();
         }
     }
@@ -376,6 +431,8 @@
         const tools = canvas.querySelector('[data-hucr-workspace-tools]');
         const catalog = canvas.querySelector('[data-hucr-catalog]');
         canvas.classList.remove('is-catalog-open');
+        delete canvas.dataset.catalogContainer;
+        delete canvas.dataset.catalogWidthUnits;
         canvas.querySelectorAll('.hucr-canvas__insert').forEach(function(insert) {
             insert.classList.remove('is-selected');
             insert.setAttribute('aria-pressed', 'false');
@@ -392,7 +449,7 @@
         const opener = event.target.closest('[data-hucr-open-catalog]');
         const canvas = opener?.closest('[data-hucr-canvas]');
         if (opener && canvas) {
-            openCatalog(canvas, Number(opener.dataset.position));
+            openCatalog(canvas, Number(opener.dataset.position), opener.dataset.containerUuid, Number(opener.dataset.widthUnits || 4));
             return;
         }
         const closer = event.target.closest('[data-hucr-close-catalog]');
@@ -405,7 +462,8 @@
         if (event.target.matches('[data-hucr-page-search]')) {
             const query = event.target.value.trim().toLocaleLowerCase('cs');
             event.target.closest('.hucr-page-tree').querySelectorAll('.hucr-page-tree__level > li').forEach(function(item) {
-                item.hidden = query !== '' && !item.textContent.toLocaleLowerCase('cs').includes(query);
+                item.hidden = item.dataset.contextAllowed === 'false'
+                    || (query !== '' && !item.textContent.toLocaleLowerCase('cs').includes(query));
             });
         }
         if (event.target.matches('[data-hucr-catalog-search]')) {
@@ -434,6 +492,7 @@
             return;
         }
         activeInspectorTab = tab.dataset.hucrInspectorTab;
+        setCanvasPanelCollapsed(inspector.closest('[data-hucr-canvas]'), 'inspector', false);
         selectInspectorTab(inspector, activeInspectorTab);
     });
 
@@ -509,6 +568,20 @@
         }
     }
 
+    function submitCanvasMove(canvas, uuid, containerUuid, position) {
+        const uuidInput = canvas.querySelector('[data-hucr-canvas-move-uuid]');
+        const containerInput = canvas.querySelector('[data-hucr-canvas-move-container]');
+        const positionInput = canvas.querySelector('[data-hucr-canvas-move-position]');
+        const submit = canvas.querySelector('[data-hucr-canvas-move-submit]');
+        if (!uuidInput || !containerInput || !positionInput || !submit) {
+            return;
+        }
+        uuidInput.value = uuid;
+        containerInput.value = containerUuid;
+        positionInput.value = String(position);
+        submit.click();
+    }
+
     document.addEventListener('dragstart', function(event) {
         const handle = event.target.closest('[data-hucr-drag-section]');
         const canvas = handle?.closest('[data-hucr-canvas]');
@@ -553,22 +626,25 @@
         }
         event.preventDefault();
         target.classList.remove('is-drop-target');
-        const before = Array.from(canvas.querySelectorAll('[data-hucr-section-card]'))
-            .map(function(card) { return card.dataset.hucrSelectSection; });
-        const sourceIndex = before.indexOf(draggedSectionUuid);
-        let insertionIndex = Math.max(0, Number(target.dataset.position) - 1);
-        if (sourceIndex < 0) {
+        const sourceCard = canvas.querySelector('[data-hucr-section-card][data-hucr-select-section="' + CSS.escape(draggedSectionUuid) + '"]');
+        const targetContainer = target.dataset.containerUuid;
+        let targetPosition = Math.max(1, Number(target.dataset.position));
+        if (!sourceCard || !targetContainer) {
             return;
         }
-        const ordered = before.filter(function(uuid) { return uuid !== draggedSectionUuid; });
-        if (sourceIndex < insertionIndex) {
-            insertionIndex--;
+        if (sourceCard.dataset.sectionContainer === targetContainer) {
+            const siblings = Array.from(canvas.querySelectorAll('[data-hucr-section-card]')).filter(function(card) {
+                return card.dataset.sectionContainer === targetContainer;
+            });
+            const sourcePosition = siblings.indexOf(sourceCard) + 1;
+            if (sourcePosition < targetPosition) {
+                targetPosition--;
+            }
+            if (sourcePosition === targetPosition) {
+                return;
+            }
         }
-        ordered.splice(Math.min(insertionIndex, ordered.length), 0, draggedSectionUuid);
-        if (ordered.every(function(uuid, index) { return uuid === before[index]; })) {
-            return;
-        }
-        submitCanvasOrder(canvas, ordered);
+        submitCanvasMove(canvas, draggedSectionUuid, targetContainer, targetPosition);
     });
 
     document.addEventListener('dragend', function() {
@@ -585,14 +661,16 @@
         const handle = event.target.closest('[data-hucr-drag-section]');
         if (handle && event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
             const canvas = handle.closest('[data-hucr-canvas]');
-            const before = Array.from(canvas.querySelectorAll('[data-hucr-section-card]'))
-                .map(function(card) { return card.dataset.hucrSelectSection; });
-            const index = before.indexOf(handle.dataset.hucrDragSection);
+            const card = handle.closest('[data-hucr-section-row]')?.querySelector('[data-hucr-section-card]');
+            const containerUuid = card?.dataset.sectionContainer;
+            const siblings = Array.from(canvas.querySelectorAll('[data-hucr-section-card]')).filter(function(candidate) {
+                return candidate.dataset.sectionContainer === containerUuid;
+            });
+            const index = siblings.indexOf(card);
             const target = event.key === 'ArrowUp' ? index - 1 : index + 1;
-            if (index >= 0 && target >= 0 && target < before.length) {
+            if (index >= 0 && target >= 0 && target < siblings.length) {
                 event.preventDefault();
-                [before[index], before[target]] = [before[target], before[index]];
-                submitCanvasOrder(canvas, before);
+                submitCanvasMove(canvas, handle.dataset.hucrDragSection, containerUuid, target + 1);
             }
             return;
         }

@@ -84,6 +84,19 @@ class SectionRegistry
                 'section_fields' => ['heading', 'gallery', 'gallery_columns'], 'section_style_fields' => ['heading'],
                 'defaults' => ['content' => ['gallery_columns' => 3]],
             ],
+            'columns' => [
+                'label' => 'Sloupce', 'permission' => 'humlnetcreative.pages.section.columns', 'items' => false,
+                'category' => 'structure', 'allowed_in_columns' => false, 'minimum_width_units' => 4,
+                'wireframe' => ['heading' => 'title', 'item_count' => 'zones'],
+                'section_fields' => ['columns_layout'], 'section_style_fields' => [],
+                'defaults' => [
+                    'layout' => [
+                        'width' => 'contained', 'spacing' => 'standard', 'columns_gap' => 'standard',
+                        'tablet_behavior' => 'keep', 'mobile_order' => 'default', 'full_padding' => 'safe',
+                    ],
+                    'content' => ['ratio' => '1:1'],
+                ],
+            ],
             'files' => ['label' => 'Soubory ke stažení', 'permission' => 'humlnetcreative.pages.section.files', 'items' => false, 'enabled' => false, 'category' => 'basic', 'minimum_width_units' => 1],
             'form' => ['label' => 'Formulář', 'permission' => 'humlnetcreative.pages.section.form', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
             'embed' => [
@@ -142,6 +155,21 @@ class SectionRegistry
     public function minimumWidthUnits(string $type): int { return (int) $this->definitions[$type]['minimum_width_units']; }
     public function supportsFillHeight(string $type): bool { return (bool) $this->definitions[$type]['supports_fill_height']; }
     public function wireframe(string $type): array { return $this->definitions[$type]['wireframe']; }
+
+    public function optionsForContext(?int $widthUnits = null): array
+    {
+        return collect($this->definitions)->filter(function(array $definition) use ($widthUnits): bool {
+            if (!($definition['enabled'] ?? true) || !BackendAuth::userHasPermission($definition['permission'])) {
+                return false;
+            }
+            if ($widthUnits === null) {
+                return true;
+            }
+
+            return ($definition['allowed_in_columns'] ?? true)
+                && (int) ($definition['minimum_width_units'] ?? 1) <= $widthUnits;
+        })->mapWithKeys(fn(array $definition, string $key) => [$key => $definition['label']])->all();
+    }
 
     public function defaults(string $type): array
     {

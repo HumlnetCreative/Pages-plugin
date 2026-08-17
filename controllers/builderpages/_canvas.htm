@@ -1,9 +1,20 @@
 <?php
-    $availableUuids = array_column($canvasSections, 'uuid');
+    $allCanvasSections = [];
+    $collectCanvasSections = function(array $sections) use (&$collectCanvasSections, &$allCanvasSections): void {
+        foreach ($sections as $section) {
+            $allCanvasSections[] = $section;
+            foreach (($section['zones'] ?? []) as $zone) {
+                $collectCanvasSections($zone['sections'] ?? []);
+            }
+        }
+    };
+    $collectCanvasSections($canvasSections);
+    $availableUuids = array_column($allCanvasSections, 'uuid');
     $selectedUuid = in_array(($selectedCanvasUuid ?? null), $availableUuids, true)
         ? $selectedCanvasUuid
         : ($canvasSections[0]['uuid'] ?? null);
-    $selectedSection = collect($canvasSections)->firstWhere('uuid', $selectedUuid);
+    $selectedSection = collect($allCanvasSections)->firstWhere('uuid', $selectedUuid);
+    $rootContainerUuid = (string) $builderPage->root_container?->uuid;
     $navigatorCollapsed = (bool) data_get($canvasPanelPreferences ?? [], 'navigator', false);
     $inspectorCollapsed = (bool) data_get($canvasPanelPreferences ?? [], 'inspector', false);
     $pagesCollapsed = (bool) data_get($canvasPanelPreferences ?? [], 'pages', false);
@@ -19,20 +30,22 @@
     <?php if ($canReorder): ?>
         <input type="hidden" name="canvas_order" data-hucr-canvas-order>
         <button type="button" hidden data-hucr-canvas-reorder-submit data-request="onCanvasReorderSections" data-load-indicator="Měním pořadí sekcí…"></button>
+        <input type="hidden" name="section_uuid" data-hucr-canvas-move-uuid>
+        <input type="hidden" name="target_container_uuid" data-hucr-canvas-move-container>
+        <input type="hidden" name="target_position" data-hucr-canvas-move-position>
+        <button type="button" hidden data-hucr-canvas-move-submit data-request="onCanvasMoveSection" data-load-indicator="Přesouvám sekci…"></button>
     <?php endif ?>
-    <div class="hucr-canvas__toolbar" aria-label="Panely Canvasu">
-        <?php if (!$pageReadOnly): ?>
-            <button type="button" class="btn btn-primary btn-sm" data-hucr-open-catalog data-position="<?= count($canvasSections) + 1 ?>">
-                <i class="icon-plus" aria-hidden="true"></i> Přidat
-            </button>
-            <button type="button" class="btn btn-default btn-sm" data-hucr-open-catalog data-position="<?= count($canvasSections) + 1 ?>">
-                <i class="icon-th-large" aria-hidden="true"></i> Sestavit stránku
-            </button>
-        <?php endif ?>
-        <button type="button" class="btn btn-default btn-sm hucr-canvas__fullscreen-toggle" data-hucr-toggle-fullscreen aria-pressed="false" title="Celá obrazovka (F)"><i class="icon-expand" aria-hidden="true"></i> <span>Celá obrazovka</span></button>
+    <div class="hucr-canvas__toolbar" aria-label="Režim celé obrazovky">
+        <button type="button" class="btn btn-default btn-sm hucr-canvas__fullscreen-toggle" data-hucr-toggle-fullscreen aria-pressed="false" title="Ukončit celou obrazovku (F)"><i class="icon-compress" aria-hidden="true"></i> <span>Ukončit celou obrazovku</span></button>
     </div>
     <aside id="hucr-canvas-navigator" class="hucr-canvas__navigator" aria-label="Navigátor sekcí">
-        <div data-hucr-workspace-tools>
+        <nav class="hucr-canvas__panel-rail" aria-label="Levý panel Canvasu">
+            <button type="button" data-hucr-toggle-canvas-panel="navigator" data-request="onToggleCanvasPanel" data-request-data="panel: 'navigator'" aria-controls="hucr-canvas-navigator-content" aria-expanded="<?= $navigatorCollapsed ? 'false' : 'true' ?>" title="<?= $navigatorCollapsed ? 'Rozbalit levý panel' : 'Sbalit levý panel' ?>"><i class="icon-chevron-<?= $navigatorCollapsed ? 'right' : 'left' ?>" aria-hidden="true"></i><span class="visually-hidden"><?= $navigatorCollapsed ? 'Rozbalit levý panel' : 'Sbalit levý panel' ?></span></button>
+            <button type="button" class="<?= !$pagesCollapsed ? 'is-active' : '' ?>" data-hucr-navigator-tool="pages" data-request="onToggleCanvasNavigatorTool" data-request-data="section: 'pages'" aria-controls="hucr-canvas-pages-content" aria-pressed="<?= !$pagesCollapsed ? 'true' : 'false' ?>" title="Stránky"><i class="icon-folder-open" aria-hidden="true"></i><span>Stránky</span></button>
+            <button type="button" class="<?= !$outlineCollapsed ? 'is-active' : '' ?>" data-hucr-navigator-tool="outline" data-request="onToggleCanvasNavigatorTool" data-request-data="section: 'outline'" aria-controls="hucr-canvas-outline-content" aria-pressed="<?= !$outlineCollapsed ? 'true' : 'false' ?>" title="Osnova"><i class="icon-list" aria-hidden="true"></i><span>Osnova</span></button>
+        </nav>
+        <div id="hucr-canvas-navigator-content" class="hucr-canvas__panel-content">
+          <div data-hucr-workspace-tools>
             <section class="hucr-canvas__left-section hucr-page-tree <?= $pagesCollapsed ? 'is-collapsed' : '' ?>" aria-label="Strom stránek" data-hucr-left-section="pages">
                 <div class="hucr-canvas__panel-heading">
                     <button type="button" class="hucr-canvas__section-toggle" data-hucr-toggle-left-section="pages" data-request="onToggleCanvasPanel" data-request-data="panel: 'pages'" aria-expanded="<?= $pagesCollapsed ? 'false' : 'true' ?>" aria-controls="hucr-canvas-pages-content"><i class="icon-chevron-down" aria-hidden="true"></i><strong>Stránky</strong></button>
@@ -67,6 +80,20 @@
                                 <span><strong data-hucr-nav-title><?= e($section['title']) ?></strong><small><?= e($section['type_label']) ?></small></span>
                                 <i class="icon-eye-slash" data-hucr-nav-hidden title="Skrytá sekce" aria-label="Skrytá sekce" <?= $section['visible'] ? 'hidden' : '' ?>></i>
                             </button>
+                            <?php foreach (($section['zones'] ?? []) as $zone): ?>
+                                <?php foreach ($zone['sections'] as $nested): ?>
+                                    <button
+                                        type="button"
+                                        role="option"
+                                        aria-selected="<?= $nested['uuid'] === $selectedUuid ? 'true' : 'false' ?>"
+                                        class="hucr-canvas__navigator-item hucr-canvas__navigator-item--nested <?= $nested['uuid'] === $selectedUuid ? 'is-selected' : '' ?>"
+                                        data-hucr-select-section="<?= e($nested['uuid']) ?>">
+                                        <span class="hucr-canvas__order">↳</span>
+                                        <span><strong data-hucr-nav-title><?= e($nested['title']) ?></strong><small><?= e($zone['title']) ?> · <?= e($nested['type_label']) ?></small></span>
+                                        <i class="icon-eye-slash" data-hucr-nav-hidden title="Skrytá sekce" aria-label="Skrytá sekce" <?= $nested['visible'] ? 'hidden' : '' ?>></i>
+                                    </button>
+                                <?php endforeach ?>
+                            <?php endforeach ?>
                         <?php endforeach ?>
                     </div>
                 <?php else: ?>
@@ -74,8 +101,8 @@
                 <?php endif ?>
                 </div>
             </section>
-        </div>
-        <div data-hucr-catalog hidden>
+          </div>
+          <div data-hucr-catalog hidden>
             <div class="hucr-canvas__panel-heading">
                 <button type="button" class="btn btn-link btn-sm" data-hucr-close-catalog><i class="icon-chevron-left" aria-hidden="true"></i> Zpět</button>
                 <strong>Katalog</strong>
@@ -94,6 +121,8 @@
                                 type="button"
                                 class="hucr-catalog__item"
                                 data-hucr-catalog-item
+                                data-allowed-in-columns="<?= $type['allowed_in_columns'] ? 'true' : 'false' ?>"
+                                data-minimum-width-units="<?= (int) $type['minimum_width_units'] ?>"
                                 data-request="onAddSection"
                                 data-request-data="builder_page_id: <?= (int) $builderPage->id ?>, section_type: '<?= e($type['type']) ?>'"
                                 data-load-indicator="Přidávám sekci…">
@@ -102,13 +131,8 @@
                         <?php endforeach ?>
                     </section>
                 <?php endforeach ?>
-                <section class="hucr-catalog__group">
-                    <h5>Struktura</h5>
-                    <button type="button" class="hucr-catalog__item" disabled title="Sloupce budou zpřístupněné v etapě E.">
-                        <i class="icon-columns" aria-hidden="true"></i><span>Sloupce <small>Připravujeme</small></span>
-                    </button>
-                </section>
             </div>
+          </div>
         </div>
     </aside>
 
@@ -124,7 +148,7 @@
                         $schemeStyle .= '--hucr-scheme-foreground: '.$section['color_scheme_foreground'].';';
                     }
                 ?>
-                <?php if (!$pageReadOnly): ?><button type="button" class="hucr-canvas__insert" data-hucr-open-catalog data-position="<?= $index + 1 ?>" aria-label="Přidat sekci na pozici <?= $index + 1 ?>" aria-pressed="false"><i class="icon-plus" aria-hidden="true"></i><span>Vložit sem</span></button><?php endif ?>
+                <?php if (!$pageReadOnly): ?><button type="button" class="hucr-canvas__insert" data-hucr-open-catalog data-position="<?= $index + 1 ?>" data-container-uuid="<?= e($rootContainerUuid) ?>" data-width-units="4" aria-label="Přidat sekci na pozici <?= $index + 1 ?>" aria-pressed="false"><i class="icon-plus" aria-hidden="true"></i><span>Vložit sem</span></button><?php endif ?>
                 <div class="hucr-canvas-card-row" data-hucr-section-row>
                     <?php if ($canReorder): ?>
                         <button type="button" class="hucr-canvas-card__drag-handle" draggable="true" data-hucr-drag-section="<?= e($section['uuid']) ?>" title="Přesunout sekci; klávesnice Alt + šipka nahoru/dolů" aria-label="Přesunout sekci <?= e($section['title']) ?>"><i class="icon-list-reorder" aria-hidden="true"></i></button>
@@ -135,6 +159,7 @@
                         data-hucr-select-section="<?= e($section['uuid']) ?>"
                         data-hucr-section-card
                         data-section-type="<?= e($section['type_label']) ?>"
+                        data-section-container="<?= e($section['container_uuid']) ?>"
                         data-section-id="<?= (int) $section['id'] ?>"
                         data-section-title="<?= e($section['title']) ?>"
                         data-section-heading="<?= e($section['heading']) ?>"
@@ -157,19 +182,37 @@
                             <?= $schemeStyle ? 'style="'.e($schemeStyle).'"' : '' ?>></span>
                         <span class="hucr-canvas-card__meta">
                             <span><?= $index + 1 ?>. <?= e($section['type_label']) ?></span>
-                            <span><?= e($section['width']) ?> · <?= e($section['spacing']) ?></span>
+                            <?php if ($section['type'] === 'columns'): ?>
+                                <span><?= e(str_replace(':', ' : ', $section['ratio'])) ?> · <?= count($section['zones']) ?> zón<?= count($section['zones']) === 1 ? 'a' : 'y' ?></span>
+                            <?php else: ?>
+                                <span><?= e($section['width']) ?> · <?= e($section['spacing']) ?></span>
+                            <?php endif ?>
                         </span>
                         <?php if ($section['thumbnail_url']): ?>
                             <span class="hucr-canvas-card__thumbnail"><img src="<?= e($section['thumbnail_url']) ?>" alt="" loading="lazy"></span>
                         <?php endif ?>
-                        <span class="hucr-canvas-card__content">
-                            <strong data-hucr-card-heading><?= e($section['heading']) ?></strong>
-                            <?php if ($section['text']): ?><span><?= e($section['text']) ?></span><?php endif ?>
-                            <?php if ($section['shared_source']): ?><small><i class="icon-link" aria-hidden="true"></i> <?= e($section['shared_source']) ?></small><?php endif ?>
-                        </span>
-                        <?php if ($section['item_count'] !== null): ?>
-                            <span class="hucr-canvas-card__schematic" aria-label="Počet položek: <?= (int) $section['item_count'] ?>">
-                                <?php for ($item = 0; $item < max(1, min(4, $section['item_count'])); $item++): ?><i></i><?php endfor ?>
+                        <?php if ($section['type'] !== 'columns'): ?>
+                            <span class="hucr-canvas-card__content">
+                                <strong data-hucr-card-heading><?= e($section['heading']) ?></strong>
+                                <?php if ($section['text']): ?><span><?= e($section['text']) ?></span><?php endif ?>
+                                <?php if ($section['shared_source']): ?><small><i class="icon-link" aria-hidden="true"></i> <?= e($section['shared_source']) ?></small><?php endif ?>
+                            </span>
+                        <?php endif ?>
+                        <?php if ($section['type'] !== 'columns' && $section['item_previews']): ?>
+                            <span class="hucr-canvas-card__previews" aria-label="Náhled položek: <?= (int) $section['item_count'] ?>">
+                                <?php foreach ($section['item_previews'] as $preview): ?>
+                                    <span class="hucr-canvas-card__preview" title="<?= e($preview['label']) ?>">
+                                        <?php if ($preview['image_url']): ?>
+                                            <img src="<?= e($preview['image_url']) ?>" alt="" loading="lazy">
+                                            <span><?= e($preview['label']) ?></span>
+                                        <?php else: ?>
+                                            <span><?= e($preview['label']) ?></span>
+                                        <?php endif ?>
+                                    </span>
+                                <?php endforeach ?>
+                                <?php if ((int) $section['item_count'] > count($section['item_previews'])): ?>
+                                    <span class="hucr-canvas-card__preview hucr-canvas-card__preview--more">+<?= (int) $section['item_count'] - count($section['item_previews']) ?></span>
+                                <?php endif ?>
                             </span>
                         <?php endif ?>
                         <span class="hucr-canvas-card__status" data-hucr-card-hidden <?= $section['visible'] ? 'hidden' : '' ?>><i class="icon-eye-slash" aria-hidden="true"></i> Skrytá</span>
@@ -182,26 +225,52 @@
                                 <button type="button" data-control="popup" data-handler="onRelationButtonUpdate" data-request-data="_relation_field: 'sections', manage_id: <?= (int) $section['id'] ?>" data-hucr-card-edit><i class="icon-pencil" aria-hidden="true"></i> Kompletní úprava</button>
                                 <button type="button" data-request="onCanvasToggleSectionVisibility" data-request-data="section_uuid: '<?= e($section['uuid']) ?>'" data-load-indicator="Měním viditelnost sekce…"><i class="<?= $section['visible'] ? 'icon-eye-slash' : 'icon-eye' ?>" aria-hidden="true"></i> <?= $section['visible'] ? 'Skrýt na webu' : 'Zobrazit na webu' ?></button>
                                 <?php if ($canDuplicate): ?><button type="button" data-request="onCanvasDuplicateSection" data-request-data="section_uuid: '<?= e($section['uuid']) ?>'" data-load-indicator="Duplikuji sekci…"><i class="icon-copy" aria-hidden="true"></i> Duplikovat</button><?php endif ?>
-                                <?php if ($canDelete): ?><button type="button" class="is-danger" data-request="onCanvasDeleteSection" data-request-data="section_uuid: '<?= e($section['uuid']) ?>'" data-request-confirm="Opravdu chcete tuto sekci odstranit? Změnu lze v této relaci vrátit pomocí Zpět." data-load-indicator="Odstraňuji sekci…"><i class="icon-trash" aria-hidden="true"></i> Odstranit</button><?php endif ?>
+                                <?php if ($canDelete): ?>
+                                    <button type="button" class="is-danger" data-request="onCanvasDeleteSection" data-request-data="section_uuid: '<?= e($section['uuid']) ?>'" data-request-confirm="<?= $section['type'] === 'columns' ? 'Odstranit Sloupce a bezpečně rozbalit jejich obsah na hlavní úroveň?' : 'Opravdu chcete tuto sekci odstranit? Změnu lze v této relaci vrátit pomocí Zpět.' ?>" data-load-indicator="Odstraňuji sekci…"><i class="icon-trash" aria-hidden="true"></i> <?= $section['type'] === 'columns' ? 'Odstranit a rozbalit obsah' : 'Odstranit' ?></button>
+                                    <?php if ($section['type'] === 'columns'): ?><button type="button" class="is-danger" data-request="onCanvasDeleteSection" data-request-data="section_uuid: '<?= e($section['uuid']) ?>', delete_mode: 'destructive'" data-request-confirm="Opravdu odstranit Sloupce včetně všech bloků uvnitř? Jde o destruktivní variantu; v této relaci ji lze vrátit pomocí Zpět." data-load-indicator="Odstraňuji Sloupce…"><i class="icon-trash" aria-hidden="true"></i> Odstranit včetně obsahu</button><?php endif ?>
+                                <?php endif ?>
                             </div>
                         </details>
                     <?php endif ?>
+                    <?php if ($section['type'] === 'columns'): ?>
+                        <div class="hucr-canvas-columns hucr-canvas-columns--<?= e(str_replace(':', '-', $section['ratio'])) ?>">
+                            <?php foreach ($section['zones'] as $zone): ?>
+                                <section class="hucr-canvas-zone" data-hucr-zone data-container-uuid="<?= e($zone['uuid']) ?>" data-width-units="<?= (int) $zone['width_units'] ?>">
+                                    <header><strong><?= e($zone['title']) ?></strong><small><?= (int) $zone['width_units'] ?> jednotka<?= (int) $zone['width_units'] === 1 ? '' : 'y' ?> · <?= e($zone['color_scheme']) ?></small></header>
+                                    <?php foreach ($zone['sections'] as $nestedIndex => $nested): ?>
+                                        <?php if (!$pageReadOnly): ?><button type="button" class="hucr-canvas__insert hucr-canvas__insert--zone" data-hucr-open-catalog data-position="<?= $nestedIndex + 1 ?>" data-container-uuid="<?= e($zone['uuid']) ?>" data-width-units="<?= (int) $zone['width_units'] ?>" aria-label="Přidat blok do zóny na pozici <?= $nestedIndex + 1 ?>"><i class="icon-plus" aria-hidden="true"></i><span>Vložit sem</span></button><?php endif ?>
+                                        <?= $this->makePartial('canvas_nested_section', [
+                                            'section' => $nested,
+                                            'selectedUuid' => $selectedUuid,
+                                            'canReorder' => $canReorder,
+                                            'canDuplicate' => $canDuplicate,
+                                            'canDelete' => $canDelete,
+                                            'pageReadOnly' => $pageReadOnly,
+                                        ]) ?>
+                                    <?php endforeach ?>
+                                    <?php if (!$pageReadOnly): ?><button type="button" class="hucr-canvas__insert hucr-canvas__insert--zone" data-hucr-open-catalog data-position="<?= count($zone['sections']) + 1 ?>" data-container-uuid="<?= e($zone['uuid']) ?>" data-width-units="<?= (int) $zone['width_units'] ?>" aria-label="Přidat blok na konec zóny"><i class="icon-plus" aria-hidden="true"></i><span>Vložit sem</span></button><?php endif ?>
+                                </section>
+                            <?php endforeach ?>
+                        </div>
+                    <?php endif ?>
                 </div>
             <?php endforeach ?>
-            <?php if (!$pageReadOnly): ?><button type="button" class="hucr-canvas__insert" data-hucr-open-catalog data-position="<?= count($canvasSections) + 1 ?>" aria-label="Přidat sekci na konec" aria-pressed="false"><i class="icon-plus" aria-hidden="true"></i><span>Vložit sem</span></button><?php endif ?>
+            <?php if (!$pageReadOnly): ?><button type="button" class="hucr-canvas__insert" data-hucr-open-catalog data-position="<?= count($canvasSections) + 1 ?>" data-container-uuid="<?= e($rootContainerUuid) ?>" data-width-units="4" aria-label="Přidat sekci na konec" aria-pressed="false"><i class="icon-plus" aria-hidden="true"></i><span>Vložit sem</span></button><?php endif ?>
         <?php else: ?>
             <div class="hucr-canvas__empty-stage"><i class="icon-plus" aria-hidden="true"></i><p>Stránka zatím nemá obsah.</p><?php if (!$pageReadOnly): ?><button type="button" class="btn btn-primary" data-hucr-open-catalog data-position="1">Přidat první sekci</button><?php endif ?></div>
         <?php endif ?>
     </main>
 
     <aside id="hucr-canvas-inspector" class="hucr-canvas__inspector" aria-label="Informace o vybrané sekci">
-        <div class="hucr-inspector__tabs" role="tablist" aria-label="Nástroje vybrané sekce">
-            <?php foreach (['edit' => 'Upravit', 'layout' => 'Layout', 'history' => 'Historie', 'checks' => 'Kontroly'] as $tab => $label): ?>
-                <button type="button" role="tab" class="<?= $tab === $activeInspectorTab ? 'is-active' : '' ?>" aria-selected="<?= $tab === $activeInspectorTab ? 'true' : 'false' ?>" data-hucr-inspector-tab="<?= $tab ?>"><?= $label ?></button>
+        <nav class="hucr-canvas__panel-rail hucr-canvas__panel-rail--right" role="tablist" aria-label="Nástroje vybrané sekce">
+            <button type="button" data-hucr-toggle-canvas-panel="inspector" data-request="onToggleCanvasPanel" data-request-data="panel: 'inspector'" aria-controls="hucr-canvas-inspector-content" aria-expanded="<?= $inspectorCollapsed ? 'false' : 'true' ?>" title="<?= $inspectorCollapsed ? 'Rozbalit pravý panel' : 'Sbalit pravý panel' ?>"><i class="icon-chevron-<?= $inspectorCollapsed ? 'left' : 'right' ?>" aria-hidden="true"></i><span class="visually-hidden"><?= $inspectorCollapsed ? 'Rozbalit pravý panel' : 'Sbalit pravý panel' ?></span></button>
+            <?php foreach (['edit' => ['icon-pencil', 'Upravit'], 'layout' => ['icon-th-large', 'Layout'], 'history' => ['icon-history', 'Historie'], 'checks' => ['icon-check-square-o', 'Kontroly']] as $tab => [$icon, $label]): ?>
+                <button type="button" role="tab" class="<?= $tab === $activeInspectorTab ? 'is-active' : '' ?>" aria-selected="<?= $tab === $activeInspectorTab ? 'true' : 'false' ?>" data-hucr-inspector-tab="<?= $tab ?>" data-request="onOpenCanvasPanel" data-request-data="panel: 'inspector'" title="<?= $label ?>"><i class="<?= $icon ?>" aria-hidden="true"></i><span><?= $label ?></span></button>
             <?php endforeach ?>
-        </div>
+        </nav>
+        <div id="hucr-canvas-inspector-content" class="hucr-canvas__panel-content">
         <div data-hucr-inspector-panel="edit" <?= $activeInspectorTab === 'edit' ? '' : 'hidden' ?>>
-          <div data-hucr-selection-details <?= $canvasSections ? '' : 'hidden' ?>>
+          <div data-hucr-selection-details <?= $allCanvasSections ? '' : 'hidden' ?>>
             <span class="hucr-canvas__type" data-hucr-selection-field="type"><?= e($selectedSection['type_label'] ?? '') ?></span>
             <h4 data-hucr-selection-field="heading"><?= e($selectedSection['heading'] ?? '') ?></h4>
             <p data-hucr-selection-field="text"><?= e($selectedSection['text'] ?? '') ?></p>
@@ -234,7 +303,7 @@
                 </div>
             <?php endif ?>
           </div>
-          <p class="hucr-canvas__empty" data-hucr-selection-empty <?= $canvasSections ? 'hidden' : '' ?>>Není vybraná žádná sekce.</p>
+          <p class="hucr-canvas__empty" data-hucr-selection-empty <?= $allCanvasSections ? 'hidden' : '' ?>>Není vybraná žádná sekce.</p>
         </div>
         <div data-hucr-inspector-panel="layout" <?= $activeInspectorTab === 'layout' ? '' : 'hidden' ?>>
             <div class="hucr-inspector__panel-content">
@@ -264,6 +333,7 @@
                 <h4>Kontroly</h4>
                 <div data-hucr-selection-checks></div>
             </div>
+        </div>
         </div>
     </aside>
 </div>

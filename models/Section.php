@@ -11,6 +11,7 @@ use October\Rain\Database\Traits\Sortable;
 use HumlnetCreative\Pages\Services\PresentationService;
 use HumlnetCreative\Pages\Services\DraftStateService;
 use HumlnetCreative\Pages\Services\PageMutationGuard;
+use HumlnetCreative\Pages\Services\ColumnsLayout;
 
 class Section extends Model
 {
@@ -24,11 +25,15 @@ class Section extends Model
     protected bool $revisionWasNew = false;
     public $belongsTo = [
         'page' => [BuilderPage::class, 'key' => 'page_id'],
+        'container' => [SectionContainer::class, 'key' => 'container_id'],
         'slider' => [SliderEntry::class, 'key' => 'slider_id'],
         'faq_group' => [FaqGroupEntry::class, 'key' => 'faq_group_id'],
         'gallery' => [\LZaplata\Gallery\Models\Gallery::class, 'key' => 'gallery_id'],
     ];
-    public $hasMany = ['items' => [SectionItem::class, 'key' => 'section_id', 'order' => 'sort_order']];
+    public $hasMany = [
+        'items' => [SectionItem::class, 'key' => 'section_id', 'order' => 'sort_order'],
+        'zones' => [SectionContainer::class, 'key' => 'parent_section_id', 'order' => 'sort_order'],
+    ];
     public $morphMany = ['media' => [MediaUse::class, 'name' => 'owner', 'order' => 'slot']];
 
     public function beforeSave()
@@ -36,6 +41,14 @@ class Section extends Model
         $this->revisionWasNew = !$this->exists;
         if (!$this->uuid) {
             $this->uuid = (string) Str::uuid();
+        }
+        if (!$this->container_id) {
+            $root = $this->page?->root_container;
+            if (!$root) {
+                throw new \ValidationException(['container' => 'Stránka nemá hlavní kontejner obsahu.']);
+            }
+            $this->container_id = $root->id;
+            $this->unsetRelation('container');
         }
         app(PageMutationGuard::class)->assertWritable($this->page);
         if (!SectionRegistry::instance()->has($this->type)) {
@@ -46,6 +59,7 @@ class Section extends Model
             throw new \ValidationException(['type' => 'Nemáte oprávnění upravovat tento typ sekce.']);
         }
         $this->validateBuilderOptions();
+        ColumnsLayout::validatePlacement($this);
         $this->applyComplianceIssues(CompliancePolicy::sectionIssues($this->type, $this->content ?: []));
     }
 
@@ -77,6 +91,16 @@ class Section extends Model
     public function getTypeLabelAttribute(): string
     {
         return SectionRegistry::instance()->all()[$this->type]['label'] ?? $this->type;
+    }
+
+    public function getContainerLabelAttribute(): string
+    {
+        $container = $this->container;
+        if (!$container || $container->kind === SectionContainer::KIND_ROOT) {
+            return 'Hlavní úroveň';
+        }
+
+        return ($container->columns_section?->title ?: 'Sloupce').' › '.($container->title ?: 'Zóna');
     }
 
     public function getPresentationAttribute(): array
@@ -135,6 +159,24 @@ class Section extends Model
         }
         if (!in_array($spacing, ['none', 'small', 'standard', 'large'], true)) {
             throw new \ValidationException(['layout' => 'Neplatné vertikální odsazení sekce.']);
+        }
+        if ($this->type === 'columns') {
+            ColumnsLayout::units((string) data_get($this->content, 'ratio', '1:1'));
+            if (!in_array(data_get($this->layout, 'columns_gap', 'standard'), ['none', 'small', 'standard', 'large'], true)) {
+                throw new \ValidationException(['layout' => 'Neplatná mezera mezi zónami Sloupců.']);
+            }
+            if (!in_array(data_get($this->layout, 'tablet_behavior', 'keep'), ['keep', 'stack'], true)) {
+                throw new \ValidationException(['layout' => 'Neplatné chování Sloupců na tabletu.']);
+            }
+            if (!in_array(data_get($this->layout, 'mobile_order', 'default'), ['default', 'reverse'], true)) {
+                throw new \ValidationException(['layout' => 'Neplatné mobilní pořadí Sloupců.']);
+            }
+            if (!in_array(data_get($this->layout, 'full_padding', 'safe'), ['safe', 'none'], true)) {
+                throw new \ValidationException(['layout' => 'Neplatné odsazení Sloupců v plné šířce.']);
+            }
+            if ($this->exists && $this->zones()->exists()) {
+                ColumnsLayout::validateZones($this);
+            }
         }
         if ($this->type === 'hero' && !in_array(data_get($this->content, 'position', 'left-center'), [
             'left-top', 'left-center', 'left-bottom', 'center-top', 'center-center',

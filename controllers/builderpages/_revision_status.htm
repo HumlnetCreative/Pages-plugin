@@ -32,9 +32,6 @@
             <button type="button" data-hucr-save-close data-request="onSave" data-request-data="close:1" data-hotkey="ctrl+shift+s, cmd+shift+s" data-load-indicator="Ukládám koncept…" class="btn btn-default btn-sm">Uložit a zavřít</button>
             <button type="button" data-hucr-undo data-request="onUndoCommand" data-load-indicator="Vracím změnu…" class="btn btn-default btn-sm" <?= $commandHistory->canUndo($builderPage->id) ? '' : 'disabled' ?>><i class="icon-undo" aria-hidden="true"></i> Zpět</button>
             <button type="button" data-hucr-redo data-request="onRedoCommand" data-load-indicator="Opakuji změnu…" class="btn btn-default btn-sm" <?= $commandHistory->canRedo($builderPage->id) ? '' : 'disabled' ?>><i class="icon-repeat" aria-hidden="true"></i> Znovu</button>
-            <?php if (BackendAuth::userHasPermission('humlnetcreative.pages.structure.copy')): ?>
-                <button type="button" data-request="onPasteSection" data-load-indicator="Vkládám sekci…" class="btn btn-default btn-sm"><i class="icon-paste" aria-hidden="true"></i> Vložit sekci</button>
-            <?php endif ?>
             <?php if (BackendAuth::userHasPermission('humlnetcreative.pages.draft.publish')): ?>
                 <button type="button" data-hucr-requires-draft <?= $draft ? '' : 'hidden' ?> data-request="onSaveAndPublish" data-request-data="page_id: <?= (int) $builderPage->id ?>" data-load-indicator="Publikuji…" class="btn btn-success btn-sm" data-request-confirm="Uložit koncept a atomicky jej zveřejnit jako novou verzi?">Uložit a publikovat</button>
             <?php endif ?>

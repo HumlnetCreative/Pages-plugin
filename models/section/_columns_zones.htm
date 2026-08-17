@@ -1,0 +1,36 @@
+<?php
+    $section = $formModel ?? $model ?? null;
+    $zones = $section?->exists ? $section->zones()->orderBy('sort_order')->get() : collect();
+    $theme = \Cms\Classes\Theme::getActiveTheme();
+    $schemes = $theme ? (array) (\Cms\Models\ThemeData::forTheme($theme)['schemes'] ?? []) : [];
+?>
+<?php if ($zones->isEmpty()): ?>
+    <p class="help-block">Zóny se vytvoří automaticky po uložení nových Sloupců.</p>
+<?php else: ?>
+    <div class="hucr-columns-zone-settings">
+        <?php foreach ($zones as $index => $zone): ?>
+            <fieldset>
+                <legend><?= e($zone->title ?: 'Zóna '.($index + 1)) ?> <small><?= (int) $zone->width_units ?> jednotka<?= (int) $zone->width_units === 1 ? '' : 'y' ?></small></legend>
+                <div class="form-group span-left">
+                    <label>Svislé zarovnání</label>
+                    <select class="form-control custom-select" name="columns_zones[<?= $index ?>][vertical_align]">
+                        <?php foreach (['top' => 'Nahoře', 'center' => 'Uprostřed', 'bottom' => 'Dole'] as $value => $label): ?><option value="<?= $value ?>" <?= $zone->vertical_align === $value ? 'selected' : '' ?>><?= $label ?></option><?php endforeach ?>
+                    </select>
+                </div>
+                <div class="form-group span-right">
+                    <label>Mezera mezi bloky</label>
+                    <select class="form-control custom-select" name="columns_zones[<?= $index ?>][block_spacing]">
+                        <?php foreach (['none' => 'Bez mezery', 'small' => 'Malá', 'standard' => 'Standardní', 'large' => 'Velká'] as $value => $label): ?><option value="<?= $value ?>" <?= $zone->block_spacing === $value ? 'selected' : '' ?>><?= $label ?></option><?php endforeach ?>
+                    </select>
+                </div>
+                <div class="form-group span-full">
+                    <label>Barevné schéma</label>
+                    <select class="form-control custom-select" name="columns_zones[<?= $index ?>][style][color_scheme]">
+                        <option value="">Dědit ze Sloupců</option>
+                        <?php foreach ($schemes as $scheme): $key = (string) data_get($scheme, 'key'); ?><option value="<?= e($key) ?>" <?= data_get($zone->style, 'color_scheme') === $key ? 'selected' : '' ?>><?= e(data_get($scheme, 'title') ?: $key) ?></option><?php endforeach ?>
+                    </select>
+                </div>
+            </fieldset>
+        <?php endforeach ?>
+    </div>
+<?php endif ?>

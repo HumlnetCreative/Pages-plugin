@@ -4,6 +4,7 @@ use Cms\Classes\Theme;
 use Cms\Models\ThemeData;
 use HumlnetCreative\Pages\Models\Section;
 use Illuminate\Support\Str;
+use HumlnetCreative\Pages\Models\SectionContainer;
 
 /** Converts normalized sections to presentation-safe structural Canvas metadata. */
 final class CanvasSectionPresenter
@@ -16,14 +17,17 @@ final class CanvasSectionPresenter
         $definition = $registry->definition($section->type);
         $wireframe = $registry->wireframe($section->type);
         $heading = $this->plainText(data_get($section, $wireframe['heading']));
-        $text = $this->plainText(data_get($section, $wireframe['text']));
-        $source = $this->sharedSource(data_get($section, $wireframe['shared_source']));
+        $text = $this->plainText($wireframe['text'] ? data_get($section, $wireframe['text']) : null);
+        $source = $this->sharedSource($wireframe['shared_source'] ? data_get($section, $wireframe['shared_source']) : null);
         $checks = app(CanvasSectionChecks::class)->forSection($section);
         $scheme = $this->colorScheme((string) data_get($section->style, 'color_scheme'));
+        $presentation = $section->type === 'carousel' ? $section->presentation : null;
 
         return [
             'id' => (int) $section->id,
             'uuid' => (string) $section->uuid,
+            'container_uuid' => (string) $section->container?->uuid,
+            'nested' => $section->container?->kind === SectionContainer::KIND_ZONE,
             'type' => (string) $section->type,
             'type_label' => (string) $definition['label'],
             'title' => trim((string) $section->title) ?: (string) $definition['label'],
@@ -31,7 +35,8 @@ final class CanvasSectionPresenter
             'heading_value' => $heading,
             'heading_editable' => $wireframe['heading'] === 'content.heading',
             'text' => Str::limit($text, 180),
-            'item_count' => $this->itemCount($section, $wireframe['item_count']),
+            'item_count' => $this->itemCount($section, $wireframe['item_count'], $presentation),
+            'item_previews' => $this->itemPreviews($section, $presentation),
             'shared_source' => Str::limit($source, 90),
             'visible' => (bool) $section->is_published,
             'width' => $this->widthLabel((string) data_get($section->layout, 'width', 'contained')),
@@ -41,6 +46,17 @@ final class CanvasSectionPresenter
             'color_scheme_foreground' => $scheme['foreground'],
             'thumbnail_url' => $this->thumbnailUrl($section, $wireframe['thumbnail']),
             'checks' => $checks,
+            'ratio' => $section->type === 'columns' ? (string) data_get($section->content, 'ratio', '1:1') : null,
+            'zones' => $section->type === 'columns' ? $section->zones->sortBy('sort_order')->map(fn(SectionContainer $zone): array => [
+                'uuid' => (string) $zone->uuid,
+                'title' => trim((string) $zone->title) ?: 'Zóna '.((int) $zone->sort_order),
+                'sort_order' => (int) $zone->sort_order,
+                'width_units' => (int) $zone->width_units,
+                'vertical_align' => (string) $zone->vertical_align,
+                'block_spacing' => (string) $zone->block_spacing,
+                'color_scheme' => trim((string) data_get($zone->style, 'color_scheme')) ?: 'Dědí ze Sloupců',
+                'sections' => $zone->sections->sortBy('sort_order')->map(fn(Section $nested): array => $this->present($nested))->values()->all(),
+            ])->values()->all() : [],
         ];
     }
 
@@ -49,20 +65,53 @@ final class CanvasSectionPresenter
         if ($slot && ($use = $section->media->firstWhere('slot', $slot))) {
             return app(MediaService::class)->backendPreviewUrl($use);
         }
-        if ($section->type === 'carousel') {
-            $slide = $section->presentation['slides'][0] ?? null;
-            $use = $slide['poster_desktop'] ?? $slide['desktop'] ?? null;
-            return $use ? app(MediaService::class)->backendPreviewUrl($use) : null;
-        }
-        if ($section->type === 'gallery' && ($image = $section->gallery?->images?->first())) {
-            return $image->getThumbUrl(480, 270, ['mode' => 'crop']);
-        }
-        if ($section->type === 'cards') {
-            $use = $section->items->flatMap->media->first();
-            return $use ? app(MediaService::class)->backendPreviewUrl($use) : null;
-        }
 
         return null;
+    }
+
+    private function itemPreviews(Section $section, ?array $presentation): array
+    {
+        $media = app(MediaService::class);
+
+        if ($section->type === 'carousel') {
+            return collect($presentation['slides'] ?? [])->take(4)->values()->map(function(array $slide, int $index) use ($media): array {
+                $use = $slide['poster_desktop'] ?? $slide['desktop'] ?? null;
+
+                return [
+                    'image_url' => $use ? $media->backendPreviewUrl($use) : null,
+                    'label' => $this->plainText($slide['title'] ?? '') ?: 'Snímek '.($index + 1),
+                ];
+            })->all();
+        }
+
+        if ($section->type === 'cards') {
+            return $section->items->take(4)->values()->map(function($item, int $index) use ($media): array {
+                $use = $item->media->firstWhere('slot', 'card_image') ?: $item->media->first();
+
+                return [
+                    'image_url' => $use ? $media->backendPreviewUrl($use) : null,
+                    'label' => $this->plainText(data_get($item->content, 'heading')) ?: 'Karta '.($index + 1),
+                ];
+            })->all();
+        }
+
+        if ($section->type === 'gallery') {
+            return collect($section->gallery?->images ?: [])->take(4)->values()->map(function($image, int $index): array {
+                return [
+                    'image_url' => $image->getThumbUrl(320, 180, ['mode' => 'crop']),
+                    'label' => trim((string) ($image->title ?: $image->description ?: $image->file_name)) ?: 'Obrázek '.($index + 1),
+                ];
+            })->all();
+        }
+
+        if ($section->type === 'accordion') {
+            return $section->faq_items->take(4)->values()->map(fn($question, int $index): array => [
+                'image_url' => null,
+                'label' => $this->plainText($question->title) ?: 'Otázka '.($index + 1),
+            ])->all();
+        }
+
+        return [];
     }
 
     private function plainText(mixed $value): string
@@ -74,13 +123,15 @@ final class CanvasSectionPresenter
         return trim((string) preg_replace('/\s+/u', ' ', strip_tags((string) $value)));
     }
 
-    private function itemCount(Section $section, ?string $path): ?int
+    private function itemCount(Section $section, ?string $path, ?array $presentation = null): ?int
     {
         if (!$path) {
             return null;
         }
 
-        $value = data_get($section, $path);
+        $value = $path === 'presentation.slides'
+            ? data_get($presentation, 'slides', [])
+            : data_get($section, $path);
         if (is_countable($value)) {
             return count($value);
         }

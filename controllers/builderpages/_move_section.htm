@@ -1,0 +1,21 @@
+<div class="modal-header"><h4 class="modal-title">Přesunout sekci</h4><button type="button" class="btn-close close" data-dismiss="popup" aria-label="Zavřít"></button></div>
+<div class="modal-body">
+    <p><strong><?= e($section->title ?: $section->type_label) ?></strong></p>
+    <div class="form-group">
+        <label for="hucr-move-target">Cílové umístění</label>
+        <select id="hucr-move-target" class="form-control custom-select" name="target_container_uuid" required>
+            <?php foreach ($targets as $target): ?>
+                <option value="<?= e($target['uuid']) ?>" <?= $target['uuid'] === $section->container?->uuid ? 'selected' : '' ?>><?= e($target['label']) ?></option>
+            <?php endforeach ?>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="hucr-move-position">Pozice v cíli</label>
+        <input id="hucr-move-position" class="form-control" type="number" min="1" name="target_position" value="<?= (int) $section->sort_order ?>">
+        <p class="help-block">Hodnota 1 vloží sekci na začátek; vyšší hodnota ji posune níže.</p>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-default" data-dismiss="popup">Zrušit</button>
+    <button type="button" class="btn btn-primary" data-request="onMoveSectionFromTable" data-request-data="section_uuid: '<?= e($section->uuid) ?>'" data-load-indicator="Přesouvám…">Přesunout</button>
+</div>

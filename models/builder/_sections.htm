@@ -1,6 +1,7 @@
 <?php $editorView = in_array(($builderEditorView ?? null), ['table', 'canvas'], true) ? $builderEditorView : 'canvas'; ?>
 <div class="hucr-builder-editor" data-hucr-builder-editor data-editor-view="<?= e($editorView) ?>">
-    <details class="hucr-builder-editor__view-menu">
+    <div class="hucr-builder-editor__topbar">
+      <details class="hucr-builder-editor__view-menu">
       <summary class="btn btn-default btn-sm"><i class="icon-eye" aria-hidden="true"></i> Zobrazení: <span data-hucr-view-label><?= $editorView === 'canvas' ? 'Canvas' : 'Tabulka' ?></span></summary>
       <div class="hucr-builder-editor__switcher">
        <div class="hucr-builder-editor__views" role="tablist" aria-label="Pohled editoru obsahu">
@@ -49,7 +50,9 @@
             <i class="icon-sliders" aria-hidden="true"></i> Pravý panel
         </button>
       </div>
-    </details>
+      </details>
+      <button type="button" class="btn btn-default btn-sm" data-hucr-toggle-fullscreen data-hucr-fullscreen-launch aria-pressed="false" title="Celá obrazovka (F)" <?= $editorView === 'canvas' ? '' : 'hidden' ?>><i class="icon-expand" aria-hidden="true"></i> <span>Celá obrazovka</span></button>
+    </div>
 
     <div id="hucr-builder-table" role="tabpanel" data-hucr-editor-panel="table" <?= $editorView === 'table' ? '' : 'hidden' ?>>
         <div class="hucr-section-picker mb-3">

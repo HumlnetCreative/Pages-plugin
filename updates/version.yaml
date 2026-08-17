@@ -194,3 +194,9 @@ v4.1.0:
 v4.1.1:
     - 'Add Page Builder appearance operation permission'
     - extend_client_role_appearance_permission.php
+v4.2.0:
+    - 'Add explicit page roots and Columns zone containers'
+    - create_section_containers.php
+v4.2.1:
+    - 'Allow the default client role to use Columns'
+    - extend_client_role_columns_permission.php

@@ -1,10 +1,3 @@
-<?php Block::put('breadcrumb') ?>
-    <ul>
-        <li><a href="<?= Backend::url('humlnetcreative/pages/builderpages') ?>">Page Builder</a></li>
-        <li><?= e($this->pageTitle) ?></li>
-    </ul>
-<?php Block::endPut() ?>
-
 <?php if (!$this->fatalError): ?>
     <?= Form::open(['class' => 'layout']) ?>
         <div class="layout-row"><?= $this->formRender() ?></div>

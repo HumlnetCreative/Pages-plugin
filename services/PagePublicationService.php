@@ -130,17 +130,7 @@ final class PagePublicationService
         $page->published_at = $projection->published_at;
         $page->setRelation('published_revision', $revision);
 
-        $visibleSections = $page->sections
-            ->filter(fn($section) => (bool) $section->is_published)
-            ->sortBy('sort_order')
-            ->values();
-        foreach ($visibleSections as $section) {
-            $section->setRelation('items', $section->items
-                ->filter(fn($item) => (bool) $item->is_published)
-                ->sortBy('sort_order')
-                ->values());
-        }
-        $page->setRelation('sections', $visibleSections);
+        app(PageStructureService::class)->prepare($page);
 
         $seen[(int) $projection->id] = true;
         $parent = $projection->published_parent_id

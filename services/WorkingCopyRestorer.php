@@ -40,10 +40,55 @@ final class WorkingCopyRestorer
                     'updated_at' => now(),
                 ]);
 
+                $containerIds = [];
+                foreach ($snapshot->containers as $containerData) {
+                    if ($containerData['kind'] === 'root') {
+                        $containerIds[$containerData['uuid']] = $this->upsertContainer((int) $page->id, $containerData, null);
+                    }
+                }
+
+                $orderedSections = collect($snapshot->sections)->sortBy(function(array $section) use ($snapshot): int {
+                    $kind = collect($snapshot->containers)->firstWhere('uuid', $section['container_uuid'])['kind'] ?? 'zone';
+                    return $kind === 'root' ? 0 : 1;
+                })->values();
                 $wantedSectionIds = [];
-                foreach ($snapshot->sections as $sectionData) {
-                    $sectionId = $this->upsertSection((int) $page->id, $sectionData);
+                $deferred = [];
+                foreach ($orderedSections as $sectionData) {
+                    $containerId = $containerIds[$sectionData['container_uuid']] ?? null;
+                    if (!$containerId) {
+                        $deferred[] = $sectionData;
+                        continue;
+                    }
+                    $sectionId = $this->upsertSection((int) $page->id, $containerId, $sectionData);
                     $wantedSectionIds[] = $sectionId;
+                }
+
+                $wantedContainerIds = array_values($containerIds);
+                foreach ($snapshot->containers as $containerData) {
+                    if ($containerData['kind'] !== 'zone') {
+                        continue;
+                    }
+                    $parentId = DB::table('humlnetcreative_pages_sections')
+                        ->where('page_id', $page->id)
+                        ->where('uuid', $containerData['parent_section_uuid'])
+                        ->value('id');
+                    if (!$parentId) {
+                        throw new \UnexpectedValueException('Nelze obnovit zónu bez nadřazených Sloupců.');
+                    }
+                    $containerIds[$containerData['uuid']] = $this->upsertContainer((int) $page->id, $containerData, (int) $parentId);
+                    $wantedContainerIds[] = $containerIds[$containerData['uuid']];
+                }
+
+                foreach ($deferred as $sectionData) {
+                    $containerId = $containerIds[$sectionData['container_uuid']] ?? null;
+                    if (!$containerId) {
+                        throw new \UnexpectedValueException('Nelze obnovit sekci bez existujícího kontejneru.');
+                    }
+                    $wantedSectionIds[] = $this->upsertSection((int) $page->id, $containerId, $sectionData);
+                }
+
+                foreach ($snapshot->sections as $sectionData) {
+                    $sectionId = (int) DB::table('humlnetcreative_pages_sections')->where('uuid', $sectionData['uuid'])->value('id');
                     $this->syncMedia(Section::class, $sectionId, (array) ($sectionData['media'] ?? []));
 
                     $wantedItemIds = [];
@@ -61,6 +106,11 @@ final class WorkingCopyRestorer
                 DB::table('humlnetcreative_pages_sections')
                     ->where('page_id', $page->id)
                     ->when($wantedSectionIds, fn($query) => $query->whereNotIn('id', $wantedSectionIds))
+                    ->update(['deleted_at' => now(), 'updated_at' => now()]);
+                DB::table('humlnetcreative_pages_section_containers')
+                    ->where('page_id', $page->id)
+                    ->where('kind', 'zone')
+                    ->when($wantedContainerIds, fn($query) => $query->whereNotIn('id', $wantedContainerIds))
                     ->update(['deleted_at' => now(), 'updated_at' => now()]);
 
                 app(PageAuditService::class)->record($page->id, $asDraft ? 'history.restored' : 'draft.discarded', $page, [
@@ -127,6 +177,7 @@ final class WorkingCopyRestorer
                 DB::table('humlnetcreative_pages_media_uses')->whereIn('id', $mediaRows->pluck('id'))->delete();
                 DB::table('humlnetcreative_pages_section_items')->whereIn('id', $itemIds)->update(['deleted_at' => now(), 'updated_at' => now()]);
                 DB::table('humlnetcreative_pages_sections')->whereIn('id', $sectionIds)->update(['deleted_at' => now(), 'updated_at' => now()]);
+                DB::table('humlnetcreative_pages_section_containers')->where('page_id', $locked->id)->update(['deleted_at' => now(), 'updated_at' => now()]);
                 DB::table('humlnetcreative_pages_builder_pages')->where('id', $locked->id)->update(['deleted_at' => now(), 'updated_at' => now()]);
                 DB::table('humlnetcreative_pages_edit_locks')->where('page_id', $locked->id)->delete();
                 app(PageAuditService::class)->record($locked->id, 'draft.deleted', $locked);
@@ -139,11 +190,45 @@ final class WorkingCopyRestorer
         app(PageCommandHistory::class)->clear($page->id);
     }
 
-    private function upsertSection(int $pageId, array $data): int
+    private function upsertContainer(int $pageId, array $data, ?int $parentSectionId): int
+    {
+        $existing = DB::table('humlnetcreative_pages_section_containers')->where('uuid', $data['uuid'])->first();
+        if (!$existing && $data['kind'] === 'root') {
+            // Version 1 snapshots receive a deterministic virtual root UUID during upgrade;
+            // restore them into the page's already existing physical root.
+            $existing = DB::table('humlnetcreative_pages_section_containers')
+                ->where('page_id', $pageId)->where('kind', 'root')->whereNull('deleted_at')->first();
+        }
+        $values = [
+            'page_id' => $pageId,
+            'parent_section_id' => $parentSectionId,
+            'kind' => $data['kind'],
+            'title' => $data['title'] ?? null,
+            'sort_order' => (int) ($data['sort_order'] ?? 0),
+            'width_units' => (int) ($data['width_units'] ?? 1),
+            'vertical_align' => $data['vertical_align'] ?? 'top',
+            'block_spacing' => $data['block_spacing'] ?? 'standard',
+            'style' => $this->json((array) ($data['style'] ?? [])),
+            'deleted_at' => null,
+            'updated_at' => now(),
+        ];
+        if ($existing) {
+            DB::table('humlnetcreative_pages_section_containers')->where('id', $existing->id)->update($values);
+            return (int) $existing->id;
+        }
+
+        return (int) DB::table('humlnetcreative_pages_section_containers')->insertGetId($values + [
+            'uuid' => $data['uuid'],
+            'created_at' => now(),
+        ]);
+    }
+
+    private function upsertSection(int $pageId, int $containerId, array $data): int
     {
         $existing = DB::table('humlnetcreative_pages_sections')->where('uuid', $data['uuid'])->first();
         $values = [
             'page_id' => $pageId,
+            'container_id' => $containerId,
             'type' => $data['type'],
             'slider_id' => data_get($data, 'shared.slider.id'),
             'faq_group_id' => data_get($data, 'shared.faq_group.id'),

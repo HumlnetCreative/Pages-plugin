@@ -66,6 +66,18 @@ class BuilderPage extends Model
 
     public function afterSave()
     {
+        if ($this->revisionWasNew && !$this->section_containers()->where('kind', SectionContainer::KIND_ROOT)->exists()) {
+            DraftStateService::withoutTracking(fn() => SectionContainer::create([
+                'page_id' => $this->id,
+                'kind' => SectionContainer::KIND_ROOT,
+                'title' => 'Hlavní obsah',
+                'sort_order' => 1,
+                'width_units' => 4,
+                'vertical_align' => 'top',
+                'block_spacing' => 'standard',
+                'style' => [],
+            ]));
+        }
         foreach ($this->children as $child) {
             $child->fullslug = $child->buildFullslug();
             $child->save();
@@ -84,8 +96,18 @@ class BuilderPage extends Model
 
     public $hasMany = [
         'sections' => [Section::class, 'key' => 'page_id', 'order' => 'sort_order'],
+        'section_containers' => [SectionContainer::class, 'key' => 'page_id', 'order' => 'sort_order'],
         'revisions' => [PageRevision::class, 'key' => 'page_id', 'order' => 'version desc'],
     ];
+
+    public function getRootContainerAttribute(): ?SectionContainer
+    {
+        if ($this->relationLoaded('section_containers')) {
+            return $this->section_containers->firstWhere('kind', SectionContainer::KIND_ROOT);
+        }
+
+        return $this->section_containers()->where('kind', SectionContainer::KIND_ROOT)->first();
+    }
     public $belongsTo = [
         'published_revision' => [PageRevision::class, 'key' => 'published_revision_id'],
     ];

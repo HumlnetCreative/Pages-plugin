@@ -2,6 +2,7 @@
 
 use HumlnetCreative\Pages\Models\Section;
 use HumlnetCreative\Pages\Models\SectionItem;
+use HumlnetCreative\Pages\Models\MediaUse;
 use HumlnetCreative\Pages\Services\CanvasSectionPresenter;
 use HumlnetCreative\Pages\Services\CanvasSectionChecks;
 use PluginTestCase;
@@ -22,10 +23,14 @@ class CanvasSectionPresenterTest extends PluginTestCase
                 'text' => '<p>Text s <em>HTML</em> značkami.</p>',
             ],
         ]);
-        $section->setRelation('items', collect([
-            new SectionItem(['uuid' => 'item-1']),
-            new SectionItem(['uuid' => 'item-2']),
-        ]));
+        $firstItem = new SectionItem(['uuid' => 'item-1', 'content' => ['heading' => 'První karta']]);
+        $firstItem->setRelation('media', collect([new MediaUse([
+            'slot' => 'card_image',
+            'variants' => ['webp' => ['small' => 'canvas/prvni-karta.webp']],
+        ])]));
+        $secondItem = new SectionItem(['uuid' => 'item-2', 'content' => ['heading' => 'Druhá karta']]);
+        $secondItem->setRelation('media', collect());
+        $section->setRelation('items', collect([$firstItem, $secondItem]));
 
         $result = (new CanvasSectionPresenter())->present($section);
 
@@ -35,6 +40,9 @@ class CanvasSectionPresenterTest extends PluginTestCase
         $this->assertSame('Nadpis karet', $result['heading_value']);
         $this->assertSame('Text s HTML značkami.', $result['text']);
         $this->assertSame(2, $result['item_count']);
+        $this->assertSame(['První karta', 'Druhá karta'], array_column($result['item_previews'], 'label'));
+        $this->assertStringContainsString('/storage/app/media/canvas/prvni-karta.webp', $result['item_previews'][0]['image_url']);
+        $this->assertNull($result['item_previews'][1]['image_url']);
         $this->assertFalse($result['visible']);
         $this->assertSame('Široká', $result['width']);
         $this->assertSame('Velká mezera', $result['spacing']);
@@ -110,6 +118,26 @@ class CanvasSectionPresenterTest extends PluginTestCase
             $this->assertSame($label, $result['type_label']);
             $this->assertSame('section-'.$type, $result['uuid']);
         }
+    }
+
+    public function testColumnsDoNotPretendTheirOwnTitleIsASharedSource(): void
+    {
+        $section = new Section([
+            'uuid' => 'section-columns',
+            'type' => 'columns',
+            'title' => 'Sloupce',
+            'content' => ['ratio' => '1:1'],
+            'layout' => [],
+            'style' => [],
+        ]);
+        $section->setRelation('items', collect());
+        $section->setRelation('media', collect());
+        $section->setRelation('zones', collect());
+
+        $result = (new CanvasSectionPresenter())->present($section);
+
+        $this->assertSame('', $result['shared_source']);
+        $this->assertSame('1:1', $result['ratio']);
     }
 
     public function testChecksExposeMissingSharedSourcesAndEmbedAccessibility(): void

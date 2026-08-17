@@ -11,6 +11,9 @@ final class SectionRegistryMetadataTest extends PluginTestCase
 
         $this->assertFalse($registry->allowedInColumns('hero'));
         $this->assertFalse($registry->allowedInColumns('carousel'));
+        $this->assertFalse($registry->allowedInColumns('columns'));
+        $this->assertSame('structure', $registry->category('columns'));
+        $this->assertSame(4, $registry->minimumWidthUnits('columns'));
         $this->assertSame(1, $registry->minimumWidthUnits('text'));
         $this->assertSame(2, $registry->minimumWidthUnits('image_text'));
         $this->assertTrue($registry->supportsFillHeight('cta'));
