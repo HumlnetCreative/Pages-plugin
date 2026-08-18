@@ -25,6 +25,10 @@
     $canReorder = !$pageReadOnly && BackendAuth::userHasPermission('humlnetcreative.pages.structure.reorder');
     $canDuplicate = !$pageReadOnly && BackendAuth::userHasPermission('humlnetcreative.pages.structure.duplicate');
     $canDelete = !$pageReadOnly && BackendAuth::userHasPermission('humlnetcreative.pages.structure.create_delete');
+    $canvasPageId = is_numeric($builderPage->id) ? (int) $builderPage->id : null;
+    $resolvedCommandTimeline = $commandTimeline ?? ($canvasPageId
+        ? app(\HumlnetCreative\Pages\Services\PageCommandHistory::class)->timeline($canvasPageId)
+        : ['position' => 0, 'total' => 0, 'entries' => []]);
 ?>
 <div class="hucr-canvas <?= $navigatorCollapsed ? 'is-navigator-collapsed' : '' ?> <?= $inspectorCollapsed ? 'is-inspector-collapsed' : '' ?> <?= $navigatorCollapsed && $inspectorCollapsed ? 'is-panels-collapsed' : '' ?>" data-hucr-canvas>
     <?php if ($canReorder): ?>
@@ -320,11 +324,11 @@
             <div class="hucr-inspector__panel-content">
                 <h4>Historie relace</h4>
                 <?= $this->makePartial('command_history', [
-                    'commandTimeline' => $commandTimeline ?? app(\HumlnetCreative\Pages\Services\PageCommandHistory::class)->timeline($builderPage->id),
+                    'commandTimeline' => $resolvedCommandTimeline,
                 ]) ?>
                 <div class="hucr-canvas__quick-actions">
-                    <button type="button" class="btn btn-default btn-sm" data-request="onUndoCommand"><i class="icon-undo" aria-hidden="true"></i> Zpět</button>
-                    <button type="button" class="btn btn-default btn-sm" data-request="onRedoCommand"><i class="icon-repeat" aria-hidden="true"></i> Znovu</button>
+                    <button type="button" class="btn btn-default btn-sm" data-request="onUndoCommand" <?= $canvasPageId ? '' : 'disabled' ?>><i class="icon-undo" aria-hidden="true"></i> Zpět</button>
+                    <button type="button" class="btn btn-default btn-sm" data-request="onRedoCommand" <?= $canvasPageId ? '' : 'disabled' ?>><i class="icon-repeat" aria-hidden="true"></i> Znovu</button>
                 </div>
             </div>
         </div>

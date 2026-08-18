@@ -1,0 +1,36 @@
+<div class="modal-header">
+    <h4 class="modal-title">Navrhnout odstranění — <?= e($builderPage->title) ?></h4>
+    <button type="button" class="btn-close close" data-dismiss="popup" aria-label="Zavřít"></button>
+</div>
+<form>
+    <div class="modal-body">
+        <div class="callout callout-warning">
+            <div class="content">
+                <h4>Nejde o okamžité smazání</h4>
+                <p>Návrh se uloží do konceptu. Veřejná stránka zůstane beze změny až do publikace; poté se data přesunou do koše a historie zůstane zachovaná.</p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="hucr-deletion-mode">Co má vracet původní URL?</label>
+            <select id="hucr-deletion-mode" name="deletion_mode" class="form-control custom-select">
+                <option value="gone" <?= ($builderPage->deletion_mode ?: 'gone') === 'gone' ? 'selected' : '' ?>>410 Gone — obsah byl trvale odstraněn (doporučeno)</option>
+                <?php if ($hasPublishedParent): ?><option value="parent" <?= $builderPage->deletion_mode === 'parent' ? 'selected' : '' ?>>301 na nadřazenou stránku</option><?php endif ?>
+                <option value="page" <?= $builderPage->deletion_mode === 'page' ? 'selected' : '' ?>>301 na vybranou stránku</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="hucr-deletion-target">Cílová stránka pro volbu „301 na vybranou stránku“</label>
+            <select id="hucr-deletion-target" name="deletion_target_page_id" class="form-control custom-select">
+                <option value="">— vyberte stránku —</option>
+                <?php foreach ($targets as $target): ?>
+                    <option value="<?= (int) $target->id ?>" <?= (int) $builderPage->deletion_target_page_id === (int) $target->id ? 'selected' : '' ?>><?= e($target->title) ?> (<?= e('/'.trim((string) $target->published_fullslug, '/')) ?>)</option>
+                <?php endforeach ?>
+            </select>
+            <p class="help-block">Pole se použije pouze při zvolené variantě „301 na vybranou stránku“.</p>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="popup">Zrušit</button>
+        <button type="button" class="btn btn-danger" data-request="onProposeDeletion" data-request-data="page_id: <?= (int) $builderPage->id ?>" data-load-indicator="Ukládám návrh…"><i class="icon-trash-o" aria-hidden="true"></i> Uložit návrh odstranění</button>
+    </div>
+</form>

@@ -58,17 +58,29 @@ final class VdlpRedirectAdapter implements RedirectManagerInterface
         bool $replaceManual = false,
     ): RedirectWriteResult {
         $source = $this->path($source);
-        $target = $this->path($target);
-        if ($source === $target) {
+        $targetPath = $this->path($target);
+        if ($source === $targetPath) {
             throw new InvalidArgumentException('Zdroj a cíl redirectu nesmějí být stejné.');
         }
+        $target = $this->relativeTarget($targetPath);
 
         $conflict = $this->findConflict($source, $context);
         if ($conflict && (!$replaceManual || $conflict->type === RedirectConflict::AMBIGUOUS)) {
             throw new RedirectConflictException($conflict);
         }
+        $targetConflict = $this->findConflict($targetPath, $context);
+        if ($targetConflict && (!$replaceManual || $targetConflict->type === RedirectConflict::AMBIGUOUS)) {
+            throw new RedirectConflictException($targetConflict);
+        }
 
-        [$result, $changedIds] = DB::transaction(function() use ($source, $target, $context, $conflict): array {
+        [$result, $changedIds] = DB::transaction(function() use ($source, $targetPath, $target, $context, $conflict, $targetConflict): array {
+            $changedIds = [];
+            $obsoleteTargetRule = $this->sourceRules($targetPath)->first();
+            if ($obsoleteTargetRule && ($this->isOwnedBy($obsoleteTargetRule, $context) || $targetConflict?->type === RedirectConflict::MANUAL)) {
+                $changedIds[] = (int) $obsoleteTargetRule->id;
+                $obsoleteTargetRule->delete();
+            }
+
             $rule = $this->sourceRules($source)->first();
             $created = !$rule;
             $rule ??= new Redirect();
@@ -99,8 +111,13 @@ final class VdlpRedirectAdapter implements RedirectManagerInterface
             ]);
             $rule->save();
 
-            $changedIds = [(int) $rule->id];
-            $flattened = $this->flattenOwnedTargets($source, $target, $context, $changedIds);
+            $changedIds[] = (int) $rule->id;
+            $flattened = $this->flattenOwnedTargets(
+                [$source, $this->relativeTarget($source)],
+                $target,
+                $context,
+                $changedIds,
+            );
 
             return [new RedirectWriteResult((int) $rule->id, $created, $flattened), $changedIds];
         });
@@ -112,14 +129,85 @@ final class VdlpRedirectAdapter implements RedirectManagerInterface
         return $result;
     }
 
+    public function putGone(
+        string $source,
+        RedirectContext $context,
+        bool $replaceManual = false,
+    ): RedirectWriteResult {
+        $source = $this->path($source);
+        $conflict = $this->findConflict($source, $context);
+        if ($conflict && (!$replaceManual || $conflict->type === RedirectConflict::AMBIGUOUS)) {
+            throw new RedirectConflictException($conflict);
+        }
+
+        [$result, $redirectId] = DB::transaction(function() use ($source, $context): array {
+            $rule = $this->sourceRules($source)->first();
+            $created = !$rule;
+            $rule ??= new Redirect();
+            $category = Category::query()->where('name', self::CATEGORY)->first() ?: new Category();
+            if (!$category->exists) {
+                $category->name = self::CATEGORY;
+                $category->save();
+            }
+
+            $rule->fill([
+                'category_id' => $category->id,
+                'match_type' => Redirect::TYPE_EXACT,
+                'target_type' => Redirect::TARGET_TYPE_NONE,
+                'from_scheme' => Redirect::SCHEME_AUTO,
+                'from_url' => $source,
+                'to_scheme' => Redirect::SCHEME_AUTO,
+                'to_url' => null,
+                'status_code' => 410,
+                'sort_order' => $rule->sort_order ?: 0,
+                'is_enabled' => true,
+                'test_lab' => false,
+                'system' => true,
+                'description' => $this->description($context),
+                'ignore_query_parameters' => true,
+                'keep_querystring' => false,
+                'ignore_case' => false,
+                'ignore_trailing_slash' => true,
+            ]);
+            $rule->save();
+
+            return [new RedirectWriteResult((int) $rule->id, $created, 0), (int) $rule->id];
+        });
+
+        DB::afterCommit(fn() => $this->events->dispatch('vdlp.redirect.changed', [
+            'redirectIds' => [$redirectId],
+        ]));
+
+        return $result;
+    }
+
+    public function removeOwned(string $source, RedirectContext $context): bool
+    {
+        $source = $this->path($source);
+        $rule = $this->sourceRules($source)
+            ->where('description', $this->description($context))
+            ->first();
+        if (!$rule) {
+            return false;
+        }
+
+        $redirectId = (int) $rule->id;
+        $rule->delete();
+        DB::afterCommit(fn() => $this->events->dispatch('vdlp.redirect.changed', [
+            'redirectIds' => [$redirectId],
+        ]));
+
+        return true;
+    }
+
     private function flattenOwnedTargets(
-        string $previousTarget,
+        array $previousTargets,
         string $finalTarget,
         RedirectContext $context,
         array &$changedIds,
     ): int {
         $count = 0;
-        $pendingTargets = [$previousTarget];
+        $pendingTargets = $previousTargets;
         $seenTargets = [];
 
         while ($pendingTargets) {
@@ -137,10 +225,11 @@ final class VdlpRedirectAdapter implements RedirectManagerInterface
                 ->get();
 
             foreach ($rules as $rule) {
-                if ($rule->from_url === $finalTarget) {
+                if ($this->relativeTarget($rule->from_url) === $finalTarget) {
                     continue;
                 }
                 $pendingTargets[] = $rule->from_url;
+                $pendingTargets[] = $this->relativeTarget($rule->from_url);
                 $rule->to_url = $finalTarget;
                 $rule->system = true;
                 $rule->save();
@@ -187,5 +276,17 @@ final class VdlpRedirectAdapter implements RedirectManagerInterface
         $path = '/'.ltrim($path, '/');
 
         return $path === '/' ? $path : rtrim($path, '/');
+    }
+
+    /**
+     * Vdlp prepends October's runtime base path only to targets without a
+     * leading slash. Keeping this value relative makes the same rule work in
+     * both a domain root and an installation such as /pages-theme.
+     */
+    private function relativeTarget(string $path): string
+    {
+        $target = ltrim($this->path($path), '/');
+
+        return $target === '' ? './' : $target;
     }
 }

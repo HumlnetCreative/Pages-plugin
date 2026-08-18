@@ -34,6 +34,8 @@ final class WorkingCopyRestorer
                     'style' => $this->json($pageData['style']),
                     'meta_title' => $pageData['meta_title'],
                     'meta_description' => $pageData['meta_description'],
+                    'deletion_mode' => null,
+                    'deletion_target_page_id' => null,
                     'has_draft' => $asDraft,
                     'draft_version' => DB::raw('draft_version + 1'),
                     'draft_started_at' => $asDraft ? now() : null,
@@ -134,6 +136,31 @@ final class WorkingCopyRestorer
         }
 
         return $this->restoreRevision(PageRevision::findOrFail($page->published_revision_id), false);
+    }
+
+    public function restoreDeleted(BuilderPage $page): BuilderPage
+    {
+        $restored = DB::transaction(function() use ($page): BuilderPage {
+            $deleted = BuilderPage::withoutGlobalScopes()->lockForUpdate()->findOrFail($page->id);
+            if (!$deleted->deleted_at || !$deleted->published_revision_id) {
+                throw new \ApplicationException('Záznam není publikovaná stránka v koši.');
+            }
+
+            DB::table($deleted->getTable())->where('id', $deleted->id)->update([
+                'deleted_at' => null,
+                'deletion_mode' => null,
+                'deletion_target_page_id' => null,
+                'updated_at' => now(),
+            ]);
+            $restored = $this->restoreRevision(PageRevision::findOrFail($deleted->published_revision_id), true);
+            app(PageAuditService::class)->record($restored->id, 'trash.restored', $restored, [
+                'revision_id' => $deleted->published_revision_id,
+            ]);
+
+            return $restored;
+        });
+
+        return $restored;
     }
 
     /** Soft-deletes a never-published page and releases only its truly orphaned media. */

@@ -8,10 +8,10 @@ use October\Rain\Database\Traits\Sortable;
 use Illuminate\Support\Str;
 use Cms\Classes\Page as CmsPage;
 use Cms\Classes\Theme;
-use Cms\Classes\Router as CmsRouter;
 use Url;
 use HumlnetCreative\Pages\Services\DraftStateService;
 use HumlnetCreative\Pages\Services\PageMutationGuard;
+use HumlnetCreative\Pages\Services\PageUrlPolicy;
 
 class BuilderPage extends Model
 {
@@ -49,9 +49,7 @@ class BuilderPage extends Model
         }
         $this->assertParentIsValid();
         $this->fullslug = $this->buildFullslug();
-        if (!$this->is_home && ($this->isReservedRoute() || $this->conflictsWithExplicitCmsRoute())) {
-            throw new \ValidationException(['slug' => 'Tato cesta je rezervovaná pro explicitní routu webu.']);
-        }
+        app(PageUrlPolicy::class)->assertAvailable($this->fullslug, (bool) $this->is_home);
         $this->assertFullslugIsUnique();
 
         foreach (['title', 'slug', 'fullslug', 'parent_id', 'is_home', 'is_published', 'sort_order', 'style', 'meta_title', 'meta_description'] as $attribute) {
@@ -253,27 +251,4 @@ class BuilderPage extends Model
         }
     }
 
-    protected function reservedRoutes(): array
-    {
-        $theme = Theme::getActiveTheme();
-        $path = $theme ? $theme->getPath().'/config/reserved-routes.php' : null;
-        return $path && is_file($path) ? require $path : [];
-    }
-
-    protected function isReservedRoute(): bool
-    {
-        $rootSegment = explode('/', $this->fullslug)[0] ?? '';
-        return in_array($this->fullslug, $this->reservedRoutes(), true)
-            || in_array($rootSegment, $this->reservedRoutes(), true);
-    }
-
-    protected function conflictsWithExplicitCmsRoute(): bool
-    {
-        $theme = Theme::getActiveTheme();
-        if (!$theme) {
-            return false;
-        }
-        $matched = (new CmsRouter($theme))->findByUrl('/'.$this->fullslug);
-        return $matched && !in_array($matched->getFileName(), ['page.htm', 'homepage.htm'], true);
-    }
 }

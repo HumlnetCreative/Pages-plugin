@@ -200,3 +200,12 @@ v4.2.0:
 v4.2.1:
     - 'Allow the default client role to use Columns'
     - extend_client_role_columns_permission.php
+v4.3.0:
+    - 'Add page deletion proposals and URL retirement workflow'
+    - add_page_deletion_proposals.php
+v4.3.1:
+    - 'Allow the default client role to restore pages from trash'
+    - extend_client_role_trash_permission.php
+v4.3.2:
+    - 'Keep Pages redirect targets portable across subdirectory installations'
+    - normalize_pages_redirect_targets.php

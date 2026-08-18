@@ -19,14 +19,13 @@
             <span>Odstranit</span>
         </button>
     <?php else: ?>
-        <button
-            type="button"
+        <a
+            href="<?= Backend::url('humlnetcreative/pages/builderpages/update/'.$record->id) ?>"
             class="btn btn-danger btn-sm"
-            disabled
-            title="Publikovanou stránku bude možné odstranit až řízeným návrhem 410/301 v etapě URL workflow"
-            aria-label="Publikovanou stránku nyní nelze odstranit">
+            title="Otevřít stránku a navrhnout řízené odstranění 410/301"
+            aria-label="Navrhnout odstranění stránky <?= e($record->title) ?>">
             <i class="icon-trash-o" aria-hidden="true"></i>
             <span>Odstranit</span>
-        </button>
+        </a>
     <?php endif ?>
 </div>

@@ -1,0 +1,21 @@
+columns:
+    title:
+        label: Stránka
+        searchable: true
+    published_fullslug:
+        label: Poslední publikovaná cesta
+    deleted_at:
+        label: Odstraněno
+        type: datetime
+    deletion_mode:
+        label: Vyřízení URL
+        type: partial
+        path: $/humlnetcreative/pages/models/builder/_column_deletion_mode.php
+        sortable: false
+    actions:
+        label: Akce
+        type: partial
+        path: $/humlnetcreative/pages/models/builder/_column_trash_actions.php
+        sortable: false
+        clickable: false
+        width: 180px

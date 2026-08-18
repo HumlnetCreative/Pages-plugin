@@ -229,6 +229,7 @@ class Plugin extends PluginBase
         $permissions['humlnetcreative.pages.draft.publish'] = ['label' => 'Koncept: publikovat', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.draft.discard'] = ['label' => 'Koncept: zahodit změny', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.history.restore'] = ['label' => 'Historie: obnovit do konceptu', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
+        $permissions['humlnetcreative.pages.redirect.override'] = ['label' => 'URL: nahradit konfliktní ruční přesměrování', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.lock.takeover'] = ['label' => 'Zámek stránky: převzít', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.structure.create_delete'] = ['label' => 'Struktura: přidávat, odstraňovat a obnovovat', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];
         $permissions['humlnetcreative.pages.structure.reorder'] = ['label' => 'Struktura: měnit pořadí a přesouvat', 'tab' => 'humlnetcreative.pages::lang.plugin.name'];

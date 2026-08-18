@@ -8,3 +8,7 @@ create:
 update:
     redirect: humlnetcreative/pages/builderpages
     redirectClose: humlnetcreative/pages/builderpages
+customMessages:
+    flashCreate: Stránka byla vytvořena jako koncept.
+    flashUpdate: Koncept byl uložen.
+    flashDelete: Stránka byla odstraněna.

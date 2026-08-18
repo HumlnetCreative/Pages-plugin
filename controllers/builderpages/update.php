@@ -16,6 +16,7 @@
         </div>
         <?php if (!$pageReadOnly): ?>
             <button type="button" hidden data-hucr-heartbeat data-request="onHeartbeat" data-request-data="page_id: <?= (int) $builderPage->id ?>"></button>
+            <button type="button" hidden data-hucr-refresh-publication-preflight data-request="onRefreshPublicationPreflight" data-request-data="page_id: <?= (int) $builderPage->id ?>"></button>
         <?php endif ?>
     <?= Form::close() ?>
 <?php else: ?>

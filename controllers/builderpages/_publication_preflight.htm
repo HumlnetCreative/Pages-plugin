@@ -1,0 +1,18 @@
+<?php $branchChanges = $publicationPreflight->descendants(); ?>
+<?php if ($branchChanges): ?>
+    <div class="callout callout-info">
+        <div class="content">
+            <h4>Publikace zasáhne celou větev</h4>
+            <p>Změna cesty nebo umístění upraví atomicky také <?= count($branchChanges) ?> <?= count($branchChanges) === 1 ? 'publikovanou stránku' : 'publikované stránky' ?>:</p>
+            <ul><?php foreach ($branchChanges as $change): ?><li><?= e($change->title) ?>: <?= e($change->oldPath) ?> → <?= e($change->newPath) ?></li><?php endforeach ?></ul>
+        </div>
+    </div>
+<?php endif ?>
+<?php if (!$publicationPreflight->passes()): ?>
+    <div class="callout callout-danger">
+        <div class="content">
+            <h4>Publikaci je potřeba vyřešit</h4>
+            <ul><?php foreach ($publicationPreflight->errors as $error): ?><li><?= e($error) ?></li><?php endforeach ?></ul>
+        </div>
+    </div>
+<?php endif ?>

@@ -1,0 +1,9 @@
+modelClass: HumlnetCreative\Pages\Models\BuilderPage
+list: $/humlnetcreative/pages/models/builder/columns_trash.yaml
+noRecordsMessage: Koš stránek je prázdný.
+defaultSort:
+    column: deleted_at
+    direction: desc
+toolbar:
+    search:
+        prompt: Hledat v koši

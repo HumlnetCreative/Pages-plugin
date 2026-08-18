@@ -19,6 +19,8 @@ use HumlnetCreative\Pages\Services\EditorSessionService;
 use HumlnetCreative\Pages\Services\MediaService;
 use HumlnetCreative\Pages\Services\PageEditLockService;
 use HumlnetCreative\Pages\Services\PagePublicationService;
+use HumlnetCreative\Pages\Services\PagePublicationPreflight;
+use HumlnetCreative\Pages\Services\PageDeletionService;
 use HumlnetCreative\Pages\Services\PageCommandService;
 use HumlnetCreative\Pages\Services\PageCommandHistory;
 use HumlnetCreative\Pages\Services\PageStructureService;
@@ -38,7 +40,10 @@ class BuilderPages extends Controller
 
     public $implement = [FormController::class, ListController::class, RelationController::class];
     public $formConfig = 'config_form.yaml';
-    public $listConfig = 'config_list.yaml';
+    public $listConfig = [
+        'active' => 'config_list.yaml',
+        'trash' => 'config_list_trash.yaml',
+    ];
     public $relationConfig = 'config_relation.yaml';
     public $requiredPermissions = ['humlnetcreative.pages.builder'];
 
@@ -47,6 +52,31 @@ class BuilderPages extends Controller
         parent::__construct();
         $this->bodyClass = trim($this->bodyClass.' hucr-builder-workspace');
         BackendMenu::setContext('HumlnetCreative.Pages', 'main-menu-item', 'side-menu-builder');
+    }
+
+    public function trash()
+    {
+        $this->assertPermission('humlnetcreative.pages.builder.trash', 'Nemáte oprávnění zobrazit koš stránek.');
+        $this->pageTitle = 'Koš stránek';
+
+        return $this->asExtension('ListController')->index();
+    }
+
+    public function listExtendQuery($query, $definition = null): void
+    {
+        if ($definition === 'trash') {
+            $query->onlyTrashed();
+        }
+    }
+
+    public function onRestorePageFromTrash(): mixed
+    {
+        $this->assertPermission('humlnetcreative.pages.builder.trash', 'Nemáte oprávnění obnovovat stránky z koše.');
+        $page = BuilderPage::withoutGlobalScopes()->findOrFail((int) request()->input('page_id'));
+        $restored = app(WorkingCopyRestorer::class)->restoreDeleted($page);
+        Flash::success('Stránka byla obnovena z koše jako koncept. Veřejná URL se změní až po publikaci.');
+
+        return Backend::redirect('humlnetcreative/pages/builderpages/update/'.$restored->id);
     }
 
     /** Opens the working copy and acquires its single-editor lock. */
@@ -73,6 +103,7 @@ class BuilderPages extends Controller
         $this->vars['canvasPageTree'] = $this->canvasPageTree($page);
         $this->vars['canvasCatalog'] = $this->canvasCatalog();
         $this->vars['commandTimeline'] = app(PageCommandHistory::class)->timeline($page->id);
+        $this->vars['publicationPreflight'] = app(PagePublicationPreflight::class)->inspect($page, true);
         $latestLifecycleAudit = $page->has_draft
             ? PageAuditLog::where('page_id', $page->id)
                 ->whereIn('action', ['history.restored', 'draft.published', 'draft.discarded'])
@@ -234,7 +265,26 @@ class BuilderPages extends Controller
         // Save the form working copy first. Any validation failure prevents publication.
         $this->asExtension('FormController')->update_onSave($page->id);
         $page = BuilderPage::withoutGlobalScopes()->findOrFail($page->id);
-        app(PagePublicationService::class)->publish($page, BackendAuth::getUser()?->id);
+        $deletionPublication = (bool) $page->deletion_mode;
+        $replaceManualRedirects = request()->boolean('replace_manual_redirects');
+        if ($replaceManualRedirects) {
+            $this->assertPermission(
+                'humlnetcreative.pages.redirect.override',
+                'Nemáte oprávnění nahrazovat ruční přesměrování.',
+            );
+        }
+        app(PagePublicationService::class)->publish(
+            $page,
+            BackendAuth::getUser()?->id,
+            $replaceManualRedirects,
+        );
+        if ($deletionPublication) {
+            Flash::forget('success');
+            Flash::success('Odstranění bylo publikováno a původní URL byla bezpečně vyřízena. Stránka je v koši.');
+
+            return Backend::redirect('humlnetcreative/pages/builderpages');
+        }
+        Flash::forget('success');
         Flash::success('Koncept byl uložen a publikován jako nová verze.');
 
         return Backend::redirect('humlnetcreative/pages/builderpages/update/'.$page->id);
@@ -262,6 +312,23 @@ class BuilderPages extends Controller
         ]);
 
         return $response;
+    }
+
+    /** Refreshes URL-derived form state after October finishes its normal form save. */
+    public function onRefreshPublicationPreflight($recordId = null): array
+    {
+        $page = $this->pageForRequest($recordId);
+        $publicationPreflight = app(PagePublicationPreflight::class)->inspect($page, true);
+        $this->dispatchBrowserEventAsync('hucr:publication-preflight-refreshed', [
+            'pageId' => (int) $page->id,
+            'fullslug' => (string) $page->fullslug,
+        ]);
+
+        return [
+            '#hucr-publication-preflight' => $this->makePartial('publication_preflight', [
+                'publicationPreflight' => $publicationPreflight,
+            ]),
+        ];
     }
 
     /** Releases the soft lock when the standard Save & close action ends the editor. */
@@ -297,6 +364,55 @@ class BuilderPages extends Controller
             'revisions' => $page->revisions()->with('publisher')->limit(PagePublicationService::RETAINED_REVISIONS)->get(),
             'canRestore' => BackendAuth::userHasPermission('humlnetcreative.pages.history.restore'),
         ]);
+    }
+
+    public function onOpenDeletionProposal($recordId = null)
+    {
+        $page = $this->pageForRequest($recordId);
+        if (!$page->published_revision_id) {
+            throw new \ApplicationException('Tato stránka zatím nebyla publikována a lze ji odstranit přímo.');
+        }
+
+        $targets = BuilderPage::withoutGlobalScopes()
+            ->where('id', '<>', $page->id)
+            ->where('published_is_published', true)
+            ->whereNotNull('published_revision_id')
+            ->when(is_null($page->site_id), fn($query) => $query->whereNull('site_id'))
+            ->when(!is_null($page->site_id), fn($query) => $query->where('site_id', $page->site_id))
+            ->orderBy('published_fullslug')
+            ->get();
+
+        return $this->makePartial('deletion_proposal', [
+            'builderPage' => $page,
+            'targets' => $targets,
+            'hasPublishedParent' => $page->parent_id && $targets->contains('id', (int) $page->parent_id),
+        ]);
+    }
+
+    public function onProposeDeletion($recordId = null)
+    {
+        $this->assertPermission('humlnetcreative.pages.structure.create_delete', 'Nemáte oprávnění navrhnout odstranění stránky.');
+        $page = $this->pageForRequest($recordId);
+        $this->assertWritablePage($page);
+        app(PageDeletionService::class)->propose(
+            $page,
+            (string) request()->input('deletion_mode', 'gone'),
+            request()->filled('deletion_target_page_id') ? (int) request()->input('deletion_target_page_id') : null,
+        );
+        Flash::success('Návrh odstranění byl uložen do konceptu. Veřejný web se změní až po publikaci.');
+
+        return Backend::redirect('humlnetcreative/pages/builderpages/update/'.$page->id);
+    }
+
+    public function onCancelDeletionProposal($recordId = null)
+    {
+        $this->assertPermission('humlnetcreative.pages.structure.create_delete', 'Nemáte oprávnění zrušit návrh odstranění stránky.');
+        $page = $this->pageForRequest($recordId);
+        $this->assertWritablePage($page);
+        app(PageDeletionService::class)->cancel($page);
+        Flash::success('Návrh odstranění byl zrušen.');
+
+        return Backend::redirect('humlnetcreative/pages/builderpages/update/'.$page->id);
     }
 
     public function onRestoreRevision($recordId = null)
@@ -352,13 +468,12 @@ class BuilderPages extends Controller
         return Backend::redirect('humlnetcreative/pages/builderpages');
     }
 
-    /** Published deletion is a later explicit URL proposal, never an immediate form action. */
     public function onDelete($recordId = null)
     {
         $page = $this->pageForRequest($recordId);
         $this->assertWritablePage($page);
         if ($page->published_revision_id) {
-            throw new \ApplicationException('Publikovanou stránku nelze odstranit přímo. Návrh odstranění a volba 410/301 budou součástí etapy URL workflow.');
+            throw new \ApplicationException('Publikovanou stránku odstraňte řízeným návrhem 410/301 v editoru stránky.');
         }
 
         app(PageEditLockService::class)->release($page, BackendAuth::getUser(), app(EditorSessionService::class)->id());
@@ -371,7 +486,7 @@ class BuilderPages extends Controller
         $this->assertPermission('humlnetcreative.pages.draft.edit', 'Nemáte oprávnění odstranit nepublikovanou stránku.');
         $page = $this->pageForRequest();
         if ($page->published_revision_id) {
-            throw new \ApplicationException('Publikovanou stránku nelze odstranit přímo. Její řízené odstranění s volbou 410/301 patří do etapy URL workflow.');
+            throw new \ApplicationException('Publikovanou stránku odstraňte řízeným návrhem 410/301 v editoru stránky.');
         }
 
         $this->assertWritablePage($page);

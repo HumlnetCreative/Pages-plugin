@@ -95,6 +95,17 @@
         }
     });
 
+    document.addEventListener('hucr:publication-preflight-refreshed', function(event) {
+        const status = revisionStatus();
+        if (!status || Number(status.dataset.pageId) !== Number(event.detail?.pageId)) {
+            return;
+        }
+        const fullslug = document.querySelector('input[name="BuilderPage[fullslug]"]');
+        if (fullslug && typeof event.detail.fullslug === 'string') {
+            fullslug.value = event.detail.fullslug;
+        }
+    });
+
     function renderCommandHistory(timeline) {
         document.querySelectorAll('[data-hucr-command-history]').forEach(function(history) {
             history.dataset.currentPosition = String(timeline.position);
@@ -869,6 +880,9 @@
                         if (saveStatus) {
                             saveStatus.textContent = saveStatus.dataset.savedLabel || 'Koncept je uložený.';
                         }
+                        window.setTimeout(function() {
+                            form.querySelector('[data-hucr-refresh-publication-preflight]')?.click();
+                        }, 0);
                     }
                 })
                 .on('ajax:fail.hucrRevision', function(event) {

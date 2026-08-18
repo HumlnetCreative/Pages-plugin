@@ -14,4 +14,12 @@ interface RedirectManagerInterface
         RedirectContext $context,
         bool $replaceManual = false,
     ): RedirectWriteResult;
+
+    public function putGone(
+        string $source,
+        RedirectContext $context,
+        bool $replaceManual = false,
+    ): RedirectWriteResult;
+
+    public function removeOwned(string $source, RedirectContext $context): bool;
 }

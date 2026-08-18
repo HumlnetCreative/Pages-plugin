@@ -36,8 +36,50 @@ final class VdlpRedirectAdapterContractTest extends PluginTestCase
 
         $adapter->putExactPermanent('/mezilehla', '/konecna', $context);
 
-        $this->assertSame('/konecna', Redirect::findOrFail($manual->id)->to_url);
+        $this->assertSame('konecna', Redirect::findOrFail($manual->id)->to_url);
         $this->assertNull($adapter->findConflict('/stara', $context));
+    }
+
+    public function testTargetsStayRelativeSoVdlpAddsRuntimeInstallationBasePath(): void
+    {
+        $adapter = app(RedirectManagerInterface::class);
+        $context = new RedirectContext(1);
+
+        $first = $adapter->putExactPermanent('/puvodni', '/cil', $context);
+        $this->assertSame('/puvodni', Redirect::findOrFail($first->redirectId)->from_url);
+        $this->assertSame('cil', Redirect::findOrFail($first->redirectId)->to_url);
+
+        $homepage = $adapter->putExactPermanent('/stara-domu', '/', $context);
+        $this->assertSame('./', Redirect::findOrFail($homepage->redirectId)->to_url);
+    }
+
+    public function testReturningToPreviousUrlRemovesObsoleteOwnedRedirectInsteadOfCreatingLoop(): void
+    {
+        $adapter = app(RedirectManagerInterface::class);
+        $context = new RedirectContext(1);
+
+        $first = $adapter->putExactPermanent('/prvni', '/druha', $context);
+        $second = $adapter->putExactPermanent('/druha', '/prvni', $context);
+
+        $this->assertNull(Redirect::find($first->redirectId));
+        $this->assertSame('/druha', Redirect::findOrFail($second->redirectId)->from_url);
+        $this->assertSame('prvni', Redirect::findOrFail($second->redirectId)->to_url);
+    }
+
+    public function testGoneRuleUsesExactSystem410WithoutTarget(): void
+    {
+        $adapter = app(RedirectManagerInterface::class);
+        $result = $adapter->putGone('/odstranena', new RedirectContext(1));
+        $rule = Redirect::findOrFail($result->redirectId);
+
+        $this->assertSame(Redirect::TYPE_EXACT, $rule->match_type);
+        $this->assertSame(Redirect::TARGET_TYPE_NONE, $rule->target_type);
+        $this->assertSame(410, (int) $rule->status_code);
+        $this->assertNull($rule->to_url);
+        $this->assertTrue((bool) $rule->system);
+        $this->assertTrue($adapter->removeOwned('/odstranena', new RedirectContext(1)));
+        $this->assertNull(Redirect::find($result->redirectId));
+        $this->assertFalse($adapter->removeOwned('/odstranena', new RedirectContext(1)));
     }
 
     private function redirect(string $source, string $target): Redirect
