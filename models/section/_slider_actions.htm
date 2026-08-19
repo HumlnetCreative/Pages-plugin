@@ -1,9 +1,9 @@
 <?php if ($model->exists): ?>
     <div class="form-group span-full">
         <?php if (\Backend\Facades\BackendAuth::userHasPermission('humlnetcreative.pages.slider.manage')): ?>
-        <button type="button" class="btn btn-default oc-icon-plus" data-control="popup" data-handler="onOpenSliderEditor" data-request-data="slider_id: 0" data-size="huge">Vytvořit nový Slider</button>
+        <button type="button" class="btn btn-default oc-icon-plus" data-control="popup" data-handler="onOpenSliderEditor" data-request-data="slider_id: 0" data-size="adaptive" data-hucr-adaptive-popup>Vytvořit nový Slider</button>
         <?php if ($model->slider_id): ?>
-            <button type="button" class="btn btn-primary oc-icon-pencil" data-control="popup" data-handler="onOpenSliderEditor" data-request-data="slider_id: <?= (int) $model->slider_id ?>" data-size="huge">Upravit Slider a jeho položky</button>
+            <button type="button" class="btn btn-primary oc-icon-pencil" data-control="popup" data-handler="onOpenSliderEditor" data-request-data="slider_id: <?= (int) $model->slider_id ?>" data-size="adaptive" data-hucr-adaptive-popup>Upravit Slider a jeho položky</button>
         <?php else: ?>
             <span class="help-block">Pro úpravu nejprve Slider vyberte a sekci uložte.</span>
         <?php endif ?>

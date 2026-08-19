@@ -209,3 +209,6 @@ v4.3.1:
 v4.3.2:
     - 'Keep Pages redirect targets portable across subdirectory installations'
     - normalize_pages_redirect_targets.php
+v4.3.3:
+    - 'Preserve query strings on Pages-owned permanent redirects'
+    - preserve_pages_redirect_query_strings.php

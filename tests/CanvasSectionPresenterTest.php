@@ -47,6 +47,8 @@ class CanvasSectionPresenterTest extends PluginTestCase
         $this->assertSame('Široká', $result['width']);
         $this->assertSame('Velká mezera', $result['spacing']);
         $this->assertSame('dark', $result['color_scheme']);
+        $this->assertFalse($result['color_scheme_inherited']);
+        $this->assertSame('section', $result['color_scheme_source']);
         $this->assertArrayHasKey('color_scheme_background', $result);
         $this->assertArrayHasKey('color_scheme_foreground', $result);
     }
@@ -138,6 +140,8 @@ class CanvasSectionPresenterTest extends PluginTestCase
 
         $this->assertSame('', $result['shared_source']);
         $this->assertSame('1:1', $result['ratio']);
+        $this->assertTrue($result['color_scheme_inherited']);
+        $this->assertSame('default', $result['color_scheme_source']);
     }
 
     public function testChecksExposeMissingSharedSourcesAndEmbedAccessibility(): void
@@ -148,6 +152,7 @@ class CanvasSectionPresenterTest extends PluginTestCase
         $gallery->setRelation('items', collect());
         $gallery->setRelation('media', collect());
         $this->assertContains('Není vybraná zdrojová galerie.', $checks->forSection($gallery));
+        $this->assertSame('error', $checks->detailsForSection($gallery)[0]['severity']);
 
         $embed = new Section([
             'type' => 'embed',
@@ -156,5 +161,6 @@ class CanvasSectionPresenterTest extends PluginTestCase
         $embed->setRelation('items', collect());
         $embed->setRelation('media', collect());
         $this->assertContains('Vložený iframe musí mít výstižný atribut title.', $checks->forSection($embed));
+        $this->assertSame('error', $checks->detailsForSection($embed)[0]['severity']);
     }
 }

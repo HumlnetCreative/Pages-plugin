@@ -19,8 +19,12 @@ final class CanvasSectionPresenter
         $heading = $this->plainText(data_get($section, $wireframe['heading']));
         $text = $this->plainText($wireframe['text'] ? data_get($section, $wireframe['text']) : null);
         $source = $this->sharedSource($wireframe['shared_source'] ? data_get($section, $wireframe['shared_source']) : null);
-        $checks = app(CanvasSectionChecks::class)->forSection($section);
-        $scheme = $this->colorScheme((string) data_get($section->style, 'color_scheme'));
+        $checks = app(CanvasSectionChecks::class)->detailsForSection($section);
+        $rawSchemeKey = trim((string) data_get($section->style, 'color_scheme'));
+        [$effectiveSchemeKey, $schemeSource] = $rawSchemeKey !== ''
+            ? [$rawSchemeKey, 'section']
+            : $this->inheritedColorScheme($section);
+        $scheme = $this->colorScheme($effectiveSchemeKey);
         $presentation = $section->type === 'carousel' ? $section->presentation : null;
 
         return [
@@ -40,12 +44,22 @@ final class CanvasSectionPresenter
             'shared_source' => Str::limit($source, 90),
             'visible' => (bool) $section->is_published,
             'width' => $this->widthLabel((string) data_get($section->layout, 'width', 'contained')),
+            'width_value' => (string) data_get($section->layout, 'width', 'contained'),
             'spacing' => $this->spacingLabel((string) data_get($section->layout, 'spacing', 'standard')),
-            'color_scheme' => $scheme['label'],
+            'spacing_value' => (string) data_get($section->layout, 'spacing', 'standard'),
+            'color_scheme' => $scheme['label'].($rawSchemeKey === '' && $effectiveSchemeKey !== '' ? ' (zděděné)' : ''),
+            'color_scheme_value' => $rawSchemeKey,
+            'color_scheme_inherited' => $rawSchemeKey === '',
+            'color_scheme_source' => $schemeSource,
             'color_scheme_background' => $scheme['background'],
             'color_scheme_foreground' => $scheme['foreground'],
+            'fill_height' => (bool) data_get($section->layout, 'fill_height', false),
+            'supports_fill_height' => $registry->supportsFillHeight($section->type),
             'thumbnail_url' => $this->thumbnailUrl($section, $wireframe['thumbnail']),
             'checks' => $checks,
+            'checks_severity' => collect($checks)->contains(fn(array $check): bool => $check['severity'] === 'error')
+                ? 'error'
+                : ($checks ? 'warning' : 'valid'),
             'ratio' => $section->type === 'columns' ? (string) data_get($section->content, 'ratio', '1:1') : null,
             'zones' => $section->type === 'columns' ? $section->zones->sortBy('sort_order')->map(fn(SectionContainer $zone): array => [
                 'uuid' => (string) $zone->uuid,
@@ -200,6 +214,27 @@ final class CanvasSectionPresenter
         ];
     }
 
+    /** @return array{0: string, 1: string} Effective key and inheritance source. */
+    private function inheritedColorScheme(Section $section): array
+    {
+        $container = $section->container;
+        if ($container?->kind === SectionContainer::KIND_ZONE) {
+            $zoneScheme = trim((string) data_get($container->style, 'color_scheme'));
+            if ($zoneScheme !== '') {
+                return [$zoneScheme, 'zone'];
+            }
+
+            $columnsScheme = trim((string) data_get($container->columns_section?->style, 'color_scheme'));
+            if ($columnsScheme !== '') {
+                return [$columnsScheme, 'columns'];
+            }
+        }
+
+        $pageScheme = trim((string) data_get($section->page?->style, 'color_scheme'));
+
+        return [$pageScheme, $pageScheme === '' ? 'default' : 'page'];
+    }
+
     private function themeSchemes(): array
     {
         if ($this->themeSchemes !== null) {
@@ -212,6 +247,32 @@ final class CanvasSectionPresenter
         }
 
         return $this->themeSchemes = (array) (ThemeData::forTheme($theme)['schemes'] ?? []);
+    }
+
+    public function colorSchemeOptions(): array
+    {
+        return collect($this->themeSchemes())->mapWithKeys(function(mixed $scheme): array {
+            $key = trim((string) data_get($scheme, 'key'));
+
+            return $key === '' ? [] : [$key => trim((string) data_get($scheme, 'title')) ?: $key];
+        })->all();
+    }
+
+    /** Theme-backed visual choices shared by the Canvas section and page inspectors. */
+    public function colorSchemeChoices(): array
+    {
+        return collect($this->themeSchemes())->map(function(mixed $scheme): array {
+            return [
+                'key' => trim((string) data_get($scheme, 'key')),
+                'title' => trim((string) data_get($scheme, 'title')),
+                'background' => $this->safeCssColor(data_get($scheme, 'bg')),
+                'foreground' => $this->safeCssColor(data_get($scheme, 'text')),
+                'primary_background' => $this->safeCssColor(data_get($scheme, 'button_primary.bg')),
+                'primary_border' => $this->safeCssColor(data_get($scheme, 'button_primary.border')),
+                'secondary_background' => $this->safeCssColor(data_get($scheme, 'button_secondary.bg')),
+                'secondary_border' => $this->safeCssColor(data_get($scheme, 'button_secondary.border')),
+            ];
+        })->filter(fn(array $scheme): bool => $scheme['key'] !== '')->values()->all();
     }
 
     private function safeCssColor(mixed $value): ?string

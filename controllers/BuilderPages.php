@@ -150,11 +150,11 @@ class BuilderPages extends Controller
         return [];
     }
 
-    /** Toggles a collapsible Canvas panel for the current backend user. */
+    /** Toggles a collapsible outer Canvas panel for the current backend user. */
     public function onToggleCanvasPanel(): array
     {
         $panel = (string) request()->input('panel');
-        if (!in_array($panel, ['navigator', 'inspector', 'pages', 'outline'], true)) {
+        if (!in_array($panel, ['navigator', 'inspector'], true)) {
             throw new \ApplicationException('Neplatný panel Canvasu.');
         }
 
@@ -178,13 +178,14 @@ class BuilderPages extends Controller
         $section = (string) request()->input('section');
         if ($panel === 'navigator' && in_array($section, ['pages', 'outline'], true)) {
             $preferences[$section] = false;
+            $preferences[$section === 'pages' ? 'outline' : 'pages'] = true;
         }
         UserPreference::forUser()->set(self::CANVAS_PANELS_PREFERENCE, $preferences);
 
         return [];
     }
 
-    /** Toggles a navigator tool, opening the outer navigator first when needed. */
+    /** Activates one navigator tool, opening the outer navigator first when needed. */
     public function onToggleCanvasNavigatorTool(): array
     {
         $section = (string) request()->input('section');
@@ -193,13 +194,9 @@ class BuilderPages extends Controller
         }
 
         $preferences = $this->canvasPanelPreferences();
-        if ($preferences['navigator']) {
-            $preferences['navigator'] = false;
-            $preferences[$section] = false;
-        }
-        else {
-            $preferences[$section] = !$preferences[$section];
-        }
+        $preferences['navigator'] = false;
+        $preferences[$section] = false;
+        $preferences[$section === 'pages' ? 'outline' : 'pages'] = true;
         UserPreference::forUser()->set(self::CANVAS_PANELS_PREFERENCE, $preferences);
 
         return [];
@@ -226,6 +223,37 @@ class BuilderPages extends Controller
             $content = (array) $section->content;
             data_set($content, 'heading', trim((string) ($input['heading'] ?? '')));
             $changes['content'] = $content;
+        }
+        $layout = (array) $section->layout;
+        $layoutChanged = false;
+        if (isset($input['width']) && in_array($input['width'], ['contained', 'wide', 'full'], true)
+            && $input['width'] !== (string) data_get($layout, 'width', 'contained')) {
+            $layout['width'] = $input['width'];
+            $layoutChanged = true;
+        }
+        if (isset($input['spacing']) && in_array($input['spacing'], ['none', 'small', 'standard', 'large'], true)
+            && $input['spacing'] !== (string) data_get($layout, 'spacing', 'standard')) {
+            $layout['spacing'] = $input['spacing'];
+            $layoutChanged = true;
+        }
+        if (SectionRegistry::instance()->supportsFillHeight($section->type) && $section->container?->kind === SectionContainer::KIND_ZONE) {
+            $fillHeight = !empty($input['fill_height']);
+            if ($fillHeight !== (bool) data_get($layout, 'fill_height', false)) {
+                $layout['fill_height'] = $fillHeight;
+                $layoutChanged = true;
+            }
+        }
+        if ($layoutChanged) {
+            $changes['layout'] = $layout;
+        }
+        if (array_key_exists('color_scheme', $input)) {
+            $colorScheme = trim((string) $input['color_scheme']);
+            $colorScheme = $colorScheme === '__inherit__' ? '' : $colorScheme;
+            if ($colorScheme !== trim((string) data_get($section->style, 'color_scheme'))) {
+                $style = (array) $section->style;
+                $style['color_scheme'] = $colorScheme ?: null;
+                $changes['style'] = $style;
+            }
         }
 
         $changes = array_filter($changes, function(mixed $value, string $key) use ($section): bool {
@@ -1323,12 +1351,19 @@ class BuilderPages extends Controller
     private function canvasPanelPreferences(): array
     {
         $stored = UserPreference::forUser()->get(self::CANVAS_PANELS_PREFERENCE, []);
+        $pagesCollapsed = (bool) data_get($stored, 'pages', true);
+        $outlineCollapsed = (bool) data_get($stored, 'outline', false);
+        // Migrate the former independently collapsible sections to one active tool.
+        if ($pagesCollapsed === $outlineCollapsed) {
+            $pagesCollapsed = true;
+            $outlineCollapsed = false;
+        }
 
         return [
             'navigator' => (bool) data_get($stored, 'navigator', false),
             'inspector' => (bool) data_get($stored, 'inspector', false),
-            'pages' => (bool) data_get($stored, 'pages', false),
-            'outline' => (bool) data_get($stored, 'outline', false),
+            'pages' => $pagesCollapsed,
+            'outline' => $outlineCollapsed,
         ];
     }
 
@@ -1336,13 +1371,13 @@ class BuilderPages extends Controller
     {
         $tab = (string) request()->input('active_inspector_tab', 'edit');
 
-        return in_array($tab, ['edit', 'layout', 'history', 'checks'], true) ? $tab : 'edit';
+        return in_array($tab, ['edit', 'layout', 'checks', 'history', 'page', 'page-style', 'seo'], true) ? $tab : 'edit';
     }
 
     private function canvasSections(BuilderPage $page): array
     {
         $allowed = array_keys(SectionRegistry::instance()->optionsForBackendUser());
-        $sections = Section::with(['container.columns_section', 'items.media.asset', 'media.asset', 'slider.slides', 'faq_group.questions', 'gallery.images'])
+        $sections = Section::with(['page', 'container.columns_section', 'items.media.asset', 'media.asset', 'slider.slides', 'faq_group.questions', 'gallery.images'])
             ->where('page_id', $page->id)
             ->whereIn('type', $allowed)
             ->orderBy('sort_order')
@@ -1357,7 +1392,13 @@ class BuilderPages extends Controller
 
     private function canvasPageTree(BuilderPage $currentPage): array
     {
-        $query = BuilderPage::withoutGlobalScopes()->orderBy('sort_order')->orderBy('title');
+        // Global scopes are disabled so the tree can apply the edited page's
+        // explicit site context. Soft-deleted pages still belong exclusively
+        // in the Trash view until they are restored as a draft.
+        $query = BuilderPage::withoutGlobalScopes()
+            ->whereNull('deleted_at')
+            ->orderBy('sort_order')
+            ->orderBy('title');
         is_null($currentPage->site_id)
             ? $query->whereNull('site_id')
             : $query->where('site_id', $currentPage->site_id);

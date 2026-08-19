@@ -1,9 +1,9 @@
 <?php if ($model->exists): ?>
     <div class="form-group span-full">
         <?php if (\Backend\Facades\BackendAuth::userHasPermission('humlnetcreative.pages.faq.manage')): ?>
-            <button type="button" class="btn btn-default oc-icon-plus" data-control="popup" data-handler="onOpenFaqEditor" data-request-data="faq_group_id: 0" data-size="huge">Vytvořit novou FAQ skupinu</button>
+            <button type="button" class="btn btn-default oc-icon-plus" data-control="popup" data-handler="onOpenFaqEditor" data-request-data="faq_group_id: 0" data-size="adaptive" data-hucr-adaptive-popup>Vytvořit novou FAQ skupinu</button>
             <?php if ($model->faq_group_id): ?>
-                <button type="button" class="btn btn-primary oc-icon-pencil" data-control="popup" data-handler="onOpenFaqEditor" data-request-data="faq_group_id: <?= (int) $model->faq_group_id ?>" data-size="huge">Upravit FAQ a jeho položky</button>
+                <button type="button" class="btn btn-primary oc-icon-pencil" data-control="popup" data-handler="onOpenFaqEditor" data-request-data="faq_group_id: <?= (int) $model->faq_group_id ?>" data-size="adaptive" data-hucr-adaptive-popup>Upravit FAQ a jeho položky</button>
             <?php else: ?>
                 <span class="help-block">Pro úpravu nejprve FAQ skupinu vyberte a sekci uložte.</span>
             <?php endif ?>

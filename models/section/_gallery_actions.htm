@@ -1,9 +1,9 @@
 <?php if ($model->exists): ?>
     <div class="form-group span-full">
         <?php if (\Backend\Facades\BackendAuth::userHasPermission('humlnetcreative.pages.gallery.manage')): ?>
-            <button type="button" class="btn btn-default oc-icon-plus" data-control="popup" data-handler="onOpenGalleryEditor" data-request-data="gallery_id: 0" data-size="huge">Vytvořit novou Galerii</button>
+            <button type="button" class="btn btn-default oc-icon-plus" data-control="popup" data-handler="onOpenGalleryEditor" data-request-data="gallery_id: 0" data-size="adaptive" data-hucr-adaptive-popup>Vytvořit novou Galerii</button>
             <?php if ($model->gallery_id): ?>
-                <button type="button" class="btn btn-primary oc-icon-pencil" data-control="popup" data-handler="onOpenGalleryEditor" data-request-data="gallery_id: <?= (int) $model->gallery_id ?>" data-size="huge">Upravit Galerii a její obrázky</button>
+                <button type="button" class="btn btn-primary oc-icon-pencil" data-control="popup" data-handler="onOpenGalleryEditor" data-request-data="gallery_id: <?= (int) $model->gallery_id ?>" data-size="adaptive" data-hucr-adaptive-popup>Upravit Galerii a její obrázky</button>
             <?php else: ?>
                 <span class="help-block">Pro úpravu nejprve Galerii vyberte a sekci uložte.</span>
             <?php endif ?>

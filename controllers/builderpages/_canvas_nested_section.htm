@@ -9,6 +9,7 @@
 ?>
 <div class="hucr-canvas-card-row hucr-canvas-card-row--nested" data-hucr-section-row>
     <?php if ($canReorder): ?><button type="button" class="hucr-canvas-card__drag-handle" draggable="true" data-hucr-drag-section="<?= e($section['uuid']) ?>" title="Přesunout blok" aria-label="Přesunout blok <?= e($section['title']) ?>"><i class="icon-list-reorder" aria-hidden="true"></i></button><?php endif ?>
+    <div class="hucr-canvas-card__shell">
     <button
         type="button"
         class="hucr-canvas-card hucr-canvas-card--nested <?= $section['uuid'] === $selectedUuid ? 'is-selected' : '' ?> <?= !$section['visible'] ? 'is-hidden' : '' ?>"
@@ -25,8 +26,15 @@
         data-section-source="<?= e($section['shared_source']) ?>"
         data-section-status="<?= $section['visible'] ? 'Viditelná' : 'Skrytá' ?>"
         data-section-width="Určuje zóna"
+        data-section-width-value="<?= e($section['width_value']) ?>"
         data-section-spacing="<?= e($section['spacing']) ?>"
+        data-section-spacing-value="<?= e($section['spacing_value']) ?>"
         data-section-scheme="<?= e($section['color_scheme']) ?>"
+        data-section-scheme-value="<?= e($section['color_scheme_value']) ?>"
+        data-section-scheme-inherited="<?= $section['color_scheme_inherited'] ? 'true' : 'false' ?>"
+        data-section-scheme-source="<?= e($section['color_scheme_source']) ?>"
+        data-section-fill-height="<?= $section['fill_height'] ? 'true' : 'false' ?>"
+        data-section-fill-height-supported="<?= $section['supports_fill_height'] ? 'true' : 'false' ?>"
         data-section-visible="<?= $section['visible'] ? 'true' : 'false' ?>"
         data-section-heading-editable="<?= $section['heading_editable'] ? 'true' : 'false' ?>"
         data-section-checks="<?= e(json_encode($section['checks'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"
@@ -35,11 +43,12 @@
         <span class="hucr-canvas-card__meta"><span><?= e($section['type_label']) ?></span><span><?= e($section['spacing']) ?></span></span>
         <span class="hucr-canvas-card__content"><strong data-hucr-card-heading><?= e($section['heading']) ?></strong><?php if ($section['text']): ?><span><?= e($section['text']) ?></span><?php endif ?></span>
         <span class="hucr-canvas-card__status" data-hucr-card-hidden <?= $section['visible'] ? 'hidden' : '' ?>><i class="icon-eye-slash"></i> Skrytá</span>
-        <span class="hucr-canvas-card__warning" data-hucr-card-warning <?= $section['checks'] ? '' : 'hidden' ?>><i class="icon-warning"></i> <span><?= count($section['checks']) ?></span></span>
     </button>
+    <button type="button" class="hucr-canvas-card__warning is-<?= e($section['checks_severity']) ?>" data-hucr-card-warning data-hucr-open-checks data-severity="<?= e($section['checks_severity']) ?>" title="Otevřít kontroly bloku" aria-label="Otevřít <?= count($section['checks']) ?> nalezených problémů v kontrolách bloku" <?= $section['checks'] ? '' : 'hidden' ?>><i class="icon-warning" aria-hidden="true"></i> <span><?= count($section['checks']) ?></span></button>
+    </div>
     <?php if (!$pageReadOnly): ?>
         <details class="hucr-canvas-card__menu"><summary title="Akce bloku" aria-label="Akce bloku"><i class="icon-bars"></i></summary><div>
-            <button type="button" data-control="popup" data-handler="onRelationButtonUpdate" data-request-data="_relation_field: 'sections', manage_id: <?= (int) $section['id'] ?>" data-hucr-card-edit><i class="icon-pencil"></i> Kompletní úprava</button>
+            <button type="button" data-control="popup" data-handler="onRelationButtonUpdate" data-request-data="_relation_field: 'sections', manage_id: <?= (int) $section['id'] ?>" data-size="adaptive" data-hucr-card-edit data-hucr-adaptive-popup><i class="icon-pencil"></i> Kompletní úprava</button>
             <button type="button" data-request="onCanvasToggleSectionVisibility" data-request-data="section_uuid: '<?= e($section['uuid']) ?>'"><i class="<?= $section['visible'] ? 'icon-eye-slash' : 'icon-eye' ?>"></i> <?= $section['visible'] ? 'Skrýt na webu' : 'Zobrazit na webu' ?></button>
             <?php if ($canDuplicate): ?><button type="button" data-request="onCanvasDuplicateSection" data-request-data="section_uuid: '<?= e($section['uuid']) ?>'"><i class="icon-copy"></i> Duplikovat</button><?php endif ?>
             <?php if ($canDelete): ?><button type="button" class="is-danger" data-request="onCanvasDeleteSection" data-request-data="section_uuid: '<?= e($section['uuid']) ?>'" data-request-confirm="Opravdu chcete tento blok odstranit?"><i class="icon-trash"></i> Odstranit</button><?php endif ?>

@@ -46,8 +46,11 @@ final class VdlpRedirectAdapterContractTest extends PluginTestCase
         $context = new RedirectContext(1);
 
         $first = $adapter->putExactPermanent('/puvodni', '/cil', $context);
-        $this->assertSame('/puvodni', Redirect::findOrFail($first->redirectId)->from_url);
-        $this->assertSame('cil', Redirect::findOrFail($first->redirectId)->to_url);
+        $firstRule = Redirect::findOrFail($first->redirectId);
+        $this->assertSame('/puvodni', $firstRule->from_url);
+        $this->assertSame('cil', $firstRule->to_url);
+        $this->assertTrue((bool) $firstRule->ignore_query_parameters);
+        $this->assertTrue((bool) $firstRule->keep_querystring);
 
         $homepage = $adapter->putExactPermanent('/stara-domu', '/', $context);
         $this->assertSame('./', Redirect::findOrFail($homepage->redirectId)->to_url);

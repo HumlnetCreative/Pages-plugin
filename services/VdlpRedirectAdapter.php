@@ -105,7 +105,7 @@ final class VdlpRedirectAdapter implements RedirectManagerInterface
                 'system' => true,
                 'description' => $this->description($context),
                 'ignore_query_parameters' => true,
-                'keep_querystring' => false,
+                'keep_querystring' => true,
                 'ignore_case' => false,
                 'ignore_trailing_slash' => true,
             ]);

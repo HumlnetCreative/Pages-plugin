@@ -3,87 +3,16 @@
         <div class="header">
             <i class="icon-info"></i>
             <h3>Obsah bude dostupný po vytvoření stránky</h3>
-            <p>Nejdřív vyplňte základní údaje a stránku uložte. Potom můžete přidávat sekce v Canvasu nebo tabulkovém editoru.</p>
+            <p>Nejdřív vyplňte základní údaje a stránku uložte. Potom můžete její obsah skládat v Canvasu.</p>
         </div>
     </div>
 <?php else: ?>
-<?php $editorView = in_array(($builderEditorView ?? null), ['table', 'canvas'], true) ? $builderEditorView : 'canvas'; ?>
-<div class="hucr-builder-editor" data-hucr-builder-editor data-editor-view="<?= e($editorView) ?>">
-    <div class="hucr-builder-editor__topbar">
-      <details class="hucr-builder-editor__view-menu">
-      <summary class="btn btn-default btn-sm"><i class="icon-eye" aria-hidden="true"></i> Zobrazení: <span data-hucr-view-label><?= $editorView === 'canvas' ? 'Canvas' : 'Tabulka' ?></span></summary>
-      <div class="hucr-builder-editor__switcher">
-       <div class="hucr-builder-editor__views" role="tablist" aria-label="Pohled editoru obsahu">
-        <button
-            type="button"
-            class="btn btn-default <?= $editorView === 'table' ? 'active' : '' ?>"
-            role="tab"
-            aria-selected="<?= $editorView === 'table' ? 'true' : 'false' ?>"
-            aria-controls="hucr-builder-table"
-            data-hucr-editor-view="table"
-            data-request="onSetEditorView"
-            data-request-data="editor_view: 'table'">
-            <i class="icon-list" aria-hidden="true"></i> Tabulka
-        </button>
-        <button
-            type="button"
-            class="btn btn-default <?= $editorView === 'canvas' ? 'active' : '' ?>"
-            role="tab"
-            aria-selected="<?= $editorView === 'canvas' ? 'true' : 'false' ?>"
-            aria-controls="hucr-builder-canvas"
-            data-hucr-editor-view="canvas"
-            data-request="onSetEditorView"
-            data-request-data="editor_view: 'canvas'">
-            <i class="icon-columns" aria-hidden="true"></i> Canvas
-        </button>
-       </div>
-        <hr>
-        <button
-            type="button"
-            class="btn btn-default"
-            data-hucr-toggle-canvas-panel="navigator"
-            data-request="onToggleCanvasPanel"
-            data-request-data="panel: 'navigator'"
-            aria-controls="hucr-canvas-navigator"
-            aria-expanded="<?= !data_get($canvasPanelPreferences ?? [], 'navigator', false) ? 'true' : 'false' ?>">
-            <i class="icon-list" aria-hidden="true"></i> Levý panel
-        </button>
-        <button
-            type="button"
-            class="btn btn-default"
-            data-hucr-toggle-canvas-panel="inspector"
-            data-request="onToggleCanvasPanel"
-            data-request-data="panel: 'inspector'"
-            aria-controls="hucr-canvas-inspector"
-            aria-expanded="<?= !data_get($canvasPanelPreferences ?? [], 'inspector', false) ? 'true' : 'false' ?>">
-            <i class="icon-sliders" aria-hidden="true"></i> Pravý panel
-        </button>
-      </div>
-      </details>
-      <button type="button" class="btn btn-default btn-sm" data-hucr-toggle-fullscreen data-hucr-fullscreen-launch aria-pressed="false" title="Celá obrazovka (F)" <?= $editorView === 'canvas' ? '' : 'hidden' ?>><i class="icon-expand" aria-hidden="true"></i> <span>Celá obrazovka</span></button>
-    </div>
-
-    <div id="hucr-builder-table" role="tabpanel" data-hucr-editor-panel="table" <?= $editorView === 'table' ? '' : 'hidden' ?>>
-        <div class="hucr-section-picker mb-3">
-            <div class="hucr-section-picker__header">
-                <h4>Přidat sekci</h4>
-                <p>Výběr odpovídá oprávněním vaší backendové role.</p>
-            </div>
-            <div class="hucr-section-picker__options">
-                <?php foreach (\HumlnetCreative\Pages\Services\SectionRegistry::instance()->optionsForBackendUser() as $type => $label): ?>
-                    <button type="button" class="btn btn-default"
-                        data-request="onAddSection"
-                        data-request-data="builder_page_id: <?= $model->id ?>, section_type: '<?= $type ?>'"
-                        data-load-indicator="Přidávám sekci…">
-                        <?= e($label) ?>
-                    </button>
-                <?php endforeach ?>
-            </div>
-        </div>
+<div class="hucr-builder-editor" data-hucr-builder-editor data-editor-view="canvas">
+    <div id="hucr-builder-table" data-hucr-editor-fallback hidden aria-hidden="true">
         <?= $this->relationRender('sections') ?>
     </div>
 
-    <div id="hucr-builder-canvas" role="tabpanel" data-hucr-editor-panel="canvas" <?= $editorView === 'canvas' ? '' : 'hidden' ?>>
+    <div id="hucr-builder-canvas">
         <div id="hucr-builder-canvas-content">
             <?= $this->makePartial('canvas', [
                 'canvasSections' => $canvasSections ?? [],

@@ -5,6 +5,15 @@ use HumlnetCreative\Pages\Models\Section;
 /** Read-only editorial checks shown by the structural Canvas. */
 final class CanvasSectionChecks
 {
+    /** @return array<int, array{message: string, severity: string}> */
+    public function detailsForSection(Section $section): array
+    {
+        return array_map(fn(string $message): array => [
+            'message' => $message,
+            'severity' => $this->severity($message),
+        ], $this->forSection($section));
+    }
+
     public function forSection(Section $section): array
     {
         $issues = CompliancePolicy::mode() === 'off'
@@ -61,5 +70,16 @@ final class CanvasSectionChecks
         }
 
         return array_values(array_unique(array_filter($issues)));
+    }
+
+    private function severity(string $message): string
+    {
+        foreach (['Není vybran', 'musí mít', 'nemá vyplněný alternativní text', 'Neplatn', 'nelze'] as $blockingPhrase) {
+            if (str_contains($message, $blockingPhrase)) {
+                return 'error';
+            }
+        }
+
+        return 'warning';
     }
 }
