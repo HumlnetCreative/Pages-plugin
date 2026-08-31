@@ -16,7 +16,7 @@ class BuilderBreadcrumbs extends ComponentBase
         if (!$page instanceof BuilderPage) { return []; }
         $result = [];
         while ($page) {
-            $result[] = ['title' => $page->title, 'url' => $page->is_home ? '/' : '/'.$page->fullslug];
+            $result[] = ['title' => $page->title, 'url' => \Url::to($page->is_home ? '/' : '/'.$page->fullslug)];
             $page = $page->parent;
         }
         return array_reverse($result);

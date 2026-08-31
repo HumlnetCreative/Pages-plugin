@@ -2,6 +2,7 @@
 
 use Backend\Facades\BackendAuth;
 use Cms\Classes\Theme;
+use October\Rain\Support\Facades\Event;
 
 /**
  * Single registry shared by the builder, permissions, import validator and theme renderer.
@@ -118,6 +119,17 @@ class SectionRegistry
         if ($path && is_file($path)) {
             foreach ((require $path) as $type => $themeDefinition) {
                 $this->definitions[$type] = array_replace($this->definitions[$type] ?? [], $themeDefinition);
+            }
+        }
+
+        foreach ((array) Event::fire('humlnetcreative.pages.extendSectionDefinitions', [$this->definitions]) as $extension) {
+            if (!is_array($extension)) {
+                continue;
+            }
+            foreach ($extension as $type => $definition) {
+                if (is_string($type) && is_array($definition)) {
+                    $this->definitions[$type] = array_replace($this->definitions[$type] ?? [], $definition);
+                }
             }
         }
 

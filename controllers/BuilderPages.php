@@ -773,6 +773,21 @@ class BuilderPages extends Controller
             'content[gallery_columns]',
             'content[embed]', '_columns_layout', 'content[ratio]', 'layout[columns_gap]', 'layout[tablet_behavior]', 'layout[mobile_order]', 'layout[full_padding]', '_columns_zones', 'media', 'items',
         ];
+
+        foreach ((array) \Event::fire('humlnetcreative.pages.extendSectionForm', [$widget, $type]) as $extension) {
+            if (!is_array($extension)) {
+                continue;
+            }
+            foreach ((array) ($extension['field_groups'] ?? []) as $group => $fields) {
+                if (is_string($group) && is_array($fields)) {
+                    $fieldMap[$group] = array_values(array_unique(array_merge($fieldMap[$group] ?? [], $fields)));
+                }
+            }
+            $specializedFields = array_values(array_unique(array_merge(
+                $specializedFields,
+                (array) ($extension['specialized_fields'] ?? []),
+            )));
+        }
         $allowedFields = $this->expandFieldGroups(SectionRegistry::instance()->sectionFields($type), $fieldMap);
 
         foreach (array_diff($specializedFields, $allowedFields) as $fieldName) {

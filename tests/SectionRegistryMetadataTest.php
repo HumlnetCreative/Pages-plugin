@@ -1,6 +1,7 @@
 <?php namespace HumlnetCreative\Pages\Tests;
 
 use HumlnetCreative\Pages\Services\SectionRegistry;
+use October\Rain\Support\Facades\Event;
 use PluginTestCase;
 
 final class SectionRegistryMetadataTest extends PluginTestCase
@@ -19,5 +20,23 @@ final class SectionRegistryMetadataTest extends PluginTestCase
         $this->assertTrue($registry->supportsFillHeight('cta'));
         $this->assertSame('media', $registry->category('gallery'));
         $this->assertSame('gallery.images', $registry->wireframe('gallery')['item_count']);
+    }
+
+    public function testProjectPluginCanRegisterASectionDefinition(): void
+    {
+        Event::listen('humlnetcreative.pages.extendSectionDefinitions', fn(): array => [
+            'example_catalog' => [
+                'label' => 'Example catalog',
+                'permission' => 'example.catalog.manage',
+                'items' => false,
+                'section_fields' => ['heading', 'catalog_options'],
+            ],
+        ]);
+
+        $registry = new SectionRegistry();
+
+        $this->assertTrue($registry->has('example_catalog'));
+        $this->assertSame(['heading', 'catalog_options'], $registry->sectionFields('example_catalog'));
+        $this->assertSame('project', $registry->category('example_catalog'));
     }
 }

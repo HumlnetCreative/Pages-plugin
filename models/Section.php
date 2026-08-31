@@ -12,6 +12,7 @@ use HumlnetCreative\Pages\Services\PresentationService;
 use HumlnetCreative\Pages\Services\DraftStateService;
 use HumlnetCreative\Pages\Services\PageMutationGuard;
 use HumlnetCreative\Pages\Services\ColumnsLayout;
+use October\Rain\Support\Facades\Event;
 
 class Section extends Model
 {
@@ -233,5 +234,7 @@ class Section extends Model
                 throw new \ValidationException(['content' => 'Interval automatického přehrávání musí být alespoň 1000 ms.']);
             }
         }
+
+        Event::fire('humlnetcreative.pages.validateSection', [$this]);
     }
 }

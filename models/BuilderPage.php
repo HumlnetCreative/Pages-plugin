@@ -110,6 +110,15 @@ class BuilderPage extends Model
         'published_revision' => [PageRevision::class, 'key' => 'published_revision_id'],
     ];
 
+    /** Published Builder pages exposed to SEO Storm's dynamic sitemap generator. */
+    public function scopeSitemap($query)
+    {
+        return $query->where('published_is_published', true)
+            ->whereNotNull('published_revision_id')
+            ->where('is_home', false)
+            ->orderBy('published_sort_order');
+    }
+
     /** Supplies Builder pages and compatible CMS templates to Page Finder. */
     public static function getMenuTypeInfo(string $type): array
     {
