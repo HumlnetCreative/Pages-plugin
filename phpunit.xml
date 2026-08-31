@@ -18,8 +18,8 @@
         <env name="CACHE_DRIVER" value="array"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="ACTIVE_THEME" value="test"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_DATABASE" value="pages_test"/>
         <env name="VDLP_REDIRECT_RULES_PATH" value="/tmp/humlnetcreative-pages-test-redirects.csv"/>
     </php>
 </phpunit>
