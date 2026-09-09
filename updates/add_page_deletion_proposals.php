@@ -29,6 +29,8 @@ class AddPageDeletionProposals extends Migration
     public function down()
     {
         Schema::table('humlnetcreative_pages_builder_pages', function($table) {
+            $table->dropIndex('hucr_pages_deletion_mode_idx');
+            $table->dropIndex('hucr_pages_deletion_target_idx');
             $table->dropColumn(['deletion_mode', 'deletion_target_page_id']);
         });
     }
