@@ -78,6 +78,9 @@ class CreatePageRevisionTables extends Migration
 
         Schema::table('humlnetcreative_pages_builder_pages', function($table) {
             $table->dropUnique('hucr_pages_builder_published_path_unique');
+            $table->dropIndex(['published_revision_id']);
+            $table->dropIndex(['published_fullslug']);
+            $table->dropIndex(['published_parent_id']);
             $table->dropColumn([
                 'published_revision_id', 'published_fullslug', 'published_parent_id',
                 'published_sort_order', 'published_is_published', 'has_draft',

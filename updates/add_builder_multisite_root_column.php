@@ -15,6 +15,7 @@ class AddBuilderMultisiteRootColumn extends Migration
     public function down()
     {
         Schema::table('humlnetcreative_pages_builder_pages', function($table) {
+            $table->dropIndex(['site_root_id']);
             $table->dropColumn('site_root_id');
         });
     }

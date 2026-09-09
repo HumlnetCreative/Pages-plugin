@@ -17,7 +17,10 @@ class AddGalleryBuilderIntegration extends Migration
     public function down()
     {
         if (Schema::hasColumn('humlnetcreative_pages_sections', 'gallery_id')) {
-            Schema::table('humlnetcreative_pages_sections', fn($table) => $table->dropColumn('gallery_id'));
+            Schema::table('humlnetcreative_pages_sections', function($table) {
+                $table->dropIndex(['gallery_id']);
+                $table->dropColumn('gallery_id');
+            });
         }
     }
 }

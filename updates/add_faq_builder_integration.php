@@ -14,6 +14,9 @@ class AddFaqBuilderIntegration extends Migration
 
     public function down()
     {
-        Schema::table('humlnetcreative_pages_sections', fn($table) => $table->dropColumn('faq_group_id'));
+        Schema::table('humlnetcreative_pages_sections', function($table) {
+            $table->dropIndex(['faq_group_id']);
+            $table->dropColumn('faq_group_id');
+        });
     }
 }

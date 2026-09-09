@@ -31,6 +31,9 @@ class AddSliderBuilderIntegration extends Migration
     {
         Schema::dropIfExists('humlnetcreative_pages_slider_media_contexts');
         Schema::table('humlnetcreative_pages_media_assets', fn($table) => $table->dropColumn('duration_ms'));
-        Schema::table('humlnetcreative_pages_sections', fn($table) => $table->dropColumn('slider_id'));
+        Schema::table('humlnetcreative_pages_sections', function($table) {
+            $table->dropIndex(['slider_id']);
+            $table->dropColumn('slider_id');
+        });
     }
 }

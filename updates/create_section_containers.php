@@ -69,7 +69,10 @@ class CreateSectionContainers extends Migration
     public function down()
     {
         if (Schema::hasColumn('humlnetcreative_pages_sections', 'container_id')) {
-            Schema::table('humlnetcreative_pages_sections', fn($table) => $table->dropColumn('container_id'));
+            Schema::table('humlnetcreative_pages_sections', function($table) {
+                $table->dropIndex(['container_id']);
+                $table->dropColumn('container_id');
+            });
         }
         Schema::dropIfExists('humlnetcreative_pages_section_containers');
     }
