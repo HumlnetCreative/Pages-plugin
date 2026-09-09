@@ -11,4 +11,11 @@ class AddBuilderMultisiteRootColumn extends Migration
             $table->unsignedBigInteger('site_root_id')->nullable()->index()->after('site_id');
         });
     }
+
+    public function down()
+    {
+        Schema::table('humlnetcreative_pages_builder_pages', function($table) {
+            $table->dropColumn('site_root_id');
+        });
+    }
 }

@@ -29,4 +29,28 @@ class ExtendClientRoleFaqPermissions extends Migration
         $role->permissions = $permissions;
         $role->save();
     }
+
+    public function down()
+    {
+        $role = UserRole::where('code', 'hucr-client')->first();
+        if (!$role) {
+            return;
+        }
+
+        $permissions = (array) $role->permissions;
+        foreach ([
+            'humlnetcreative.pages.faq.manage',
+            'humlnetcreative.pages.faq.select',
+            'tailor.entry.humlnetcreative_faq_groups',
+            'tailor.entry.humlnetcreative_faq_groups.create',
+            'tailor.entry.humlnetcreative_faq_groups.publish',
+            'tailor.entry.lzaplata_faq',
+            'tailor.entry.lzaplata_faq.create',
+            'tailor.entry.lzaplata_faq.publish',
+        ] as $permission) {
+            unset($permissions[$permission]);
+        }
+        $role->permissions = $permissions;
+        $role->save();
+    }
 }

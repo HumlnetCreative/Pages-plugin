@@ -24,4 +24,24 @@ class ExtendClientRoleRevisionPermissions extends Migration
         $role->permissions = $permissions;
         $role->save();
     }
+
+    public function down()
+    {
+        $role = UserRole::where('code', 'hucr-client')->first();
+        if (!$role) {
+            return;
+        }
+
+        $permissions = (array) $role->permissions;
+        foreach ([
+            'humlnetcreative.pages.draft.edit',
+            'humlnetcreative.pages.draft.publish',
+            'humlnetcreative.pages.draft.discard',
+            'humlnetcreative.pages.history.restore',
+        ] as $permission) {
+            unset($permissions[$permission]);
+        }
+        $role->permissions = $permissions;
+        $role->save();
+    }
 }

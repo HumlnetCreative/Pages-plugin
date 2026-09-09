@@ -32,7 +32,7 @@ use HumlnetCreative\Pages\Services\VdlpRedirectAdapter;
 class Plugin extends PluginBase
 {
     /** @var array Required October plugins. */
-    public $require = ['Vdlp.Redirect'];
+    public $require = ['Vdlp.Redirect', 'LZaplata.Gallery'];
 
     /**
      * register method, called when the plugin is first registered.

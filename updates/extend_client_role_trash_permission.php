@@ -17,4 +17,17 @@ class ExtendClientRoleTrashPermission extends Migration
         $role->permissions = $permissions;
         $role->save();
     }
+
+    public function down()
+    {
+        $role = UserRole::where('code', 'hucr-client')->first();
+        if (!$role) {
+            return;
+        }
+
+        $permissions = (array) $role->permissions;
+        unset($permissions['humlnetcreative.pages.builder.trash']);
+        $role->permissions = $permissions;
+        $role->save();
+    }
 }

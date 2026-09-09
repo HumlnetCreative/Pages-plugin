@@ -25,4 +25,24 @@ class ExtendClientRoleGalleryPermissions extends Migration
         $role->permissions = $permissions;
         $role->save();
     }
+
+    public function down()
+    {
+        $role = UserRole::where('code', 'hucr-client')->first();
+        if (!$role) {
+            return;
+        }
+
+        $permissions = (array) $role->permissions;
+        foreach ([
+            'humlnetcreative.pages.gallery.manage',
+            'humlnetcreative.pages.gallery.select',
+            'default',
+            'gallery_create',
+        ] as $permission) {
+            unset($permissions[$permission]);
+        }
+        $role->permissions = $permissions;
+        $role->save();
+    }
 }

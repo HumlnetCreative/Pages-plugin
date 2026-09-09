@@ -9,4 +9,10 @@ class SeedInitialPageRevisions extends Migration
     {
         app(PagePublicationService::class)->seedInitialSnapshots();
     }
+
+    public function down()
+    {
+        // Published revisions may have changed since this data migration ran.
+        // Preserve them here; the owning schema migration handles full uninstall.
+    }
 }
