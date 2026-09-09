@@ -4,7 +4,9 @@ use HumlnetCreative\Pages\Classes\Redirect\RedirectConflict;
 use HumlnetCreative\Pages\Classes\Redirect\RedirectConflictException;
 use HumlnetCreative\Pages\Classes\Redirect\RedirectContext;
 use HumlnetCreative\Pages\Contracts\RedirectManagerInterface;
+use HumlnetCreative\Pages\Updates\NormalizePagesRedirectTargets;
 use PluginTestCase;
+use Vdlp\Redirect\Classes\Contracts\PublishManagerInterface;
 use Vdlp\Redirect\Models\Redirect;
 
 final class VdlpRedirectAdapterContractTest extends PluginTestCase
@@ -83,6 +85,43 @@ final class VdlpRedirectAdapterContractTest extends PluginTestCase
         $this->assertTrue($adapter->removeOwned('/odstranena', new RedirectContext(1)));
         $this->assertNull(Redirect::find($result->redirectId));
         $this->assertFalse($adapter->removeOwned('/odstranena', new RedirectContext(1)));
+    }
+
+    public function testTargetNormalizationMigrationCanBeRolledBack(): void
+    {
+        $publishManager = new class implements PublishManagerInterface {
+            public int $calls = 0;
+
+            public function publish(): int
+            {
+                $this->calls++;
+
+                return 0;
+            }
+        };
+        app()->instance(PublishManagerInterface::class, $publishManager);
+
+        $pageTarget = $this->redirect('/puvodni', '/cil');
+        $pageTarget->description = 'humlnetcreative.pages:site:1';
+        $pageTarget->save();
+        $homepageTarget = $this->redirect('/stara-domu', '/');
+        $homepageTarget->description = 'humlnetcreative.pages:site:1';
+        $homepageTarget->save();
+        $manualTarget = $this->redirect('/rucni', '/rucni-cil');
+
+        $migration = new NormalizePagesRedirectTargets();
+        $migration->up();
+
+        $this->assertSame('cil', $pageTarget->fresh()->to_url);
+        $this->assertSame('./', $homepageTarget->fresh()->to_url);
+        $this->assertSame('/rucni-cil', $manualTarget->fresh()->to_url);
+
+        $migration->down();
+
+        $this->assertSame('/cil', $pageTarget->fresh()->to_url);
+        $this->assertSame('/', $homepageTarget->fresh()->to_url);
+        $this->assertSame('/rucni-cil', $manualTarget->fresh()->to_url);
+        $this->assertSame(2, $publishManager->calls);
     }
 
     private function redirect(string $source, string $target): Redirect
