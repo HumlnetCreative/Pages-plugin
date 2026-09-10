@@ -119,6 +119,12 @@ class BuilderPage extends Model
             ->orderBy('published_sort_order');
     }
 
+    /** Keep sitemap URLs on the published projection while a URL draft exists. */
+    public function getSitemapFullslugAttribute(): string
+    {
+        return (string) ($this->published_fullslug ?: $this->fullslug);
+    }
+
     /** Supplies Builder pages and compatible CMS templates to Page Finder. */
     public static function getMenuTypeInfo(string $type): array
     {
@@ -259,5 +265,4 @@ class BuilderPage extends Model
             $parentId = (int) (static::withoutGlobalScopes()->whereKey($parentId)->value('parent_id') ?: 0);
         }
     }
-
 }

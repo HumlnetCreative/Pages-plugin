@@ -164,13 +164,38 @@ class Plugin extends PluginBase
     }
 
     /**
+     * Register Builder pages with SEO Storm so dynamic sitemap templates can
+     * safely eager-load their per-record SEO options.
+     */
+    public function registerStormedModels(): array
+    {
+        return [
+            \HumlnetCreative\Pages\Models\BuilderPage::class => [
+                'placement' => 'tabs',
+                'excludeFields' => [
+                    'model_class',
+                    'model_scope',
+                    'model_params',
+                    'lastmod',
+                    'use_updated_at',
+                    'changefreq',
+                    'priority',
+                    'enabled_in_sitemap',
+                ],
+            ],
+        ];
+    }
+
+    /**
      * @return array
      */
     public function registerMarkupTags(): array
     {
         return [
             "filters" => [
-                "bootstrap" => function (string $text): string {
+                "bootstrap" => function (?string $text): string {
+                    $text ??= '';
+
                     return preg_replace_callback("~<table.*?</table>~is", function(array $matches): string {
                         $table = str_replace("<table", "<table class='table table-bordered'", $matches[0]);
 
