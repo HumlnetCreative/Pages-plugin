@@ -30,7 +30,7 @@ class SliderRecordLifecycle
                 ->where(fn($query) => is_null($model->site_id) ? $query->whereNull('site_id') : $query->where('site_id', $model->site_id))->first();
             if (!$context) throw new \ValidationException(['slider_media' => 'Před publikováním připravte média položky pro Slider „'.$slider->title.'“.']);
             if (($model->type ?: 'image') === 'video') {
-                if (!$context->media()->where('slot', 'slider_video_mp4')->exists()) throw new \ValidationException(['slider_media' => 'Video položka musí mít MP4 soubor. WebM je volitelný.']);
+                if (!$context->media()->whereIn('slot', ['slider_video_mp4', 'slider_video_webm'])->exists()) throw new \ValidationException(['slider_media' => 'Video položka musí mít alespoň jeden MP4 nebo WebM soubor.']);
                 if ($slider->slides->contains(fn($slide) => $slide->id !== $model->id && $slide->is_enabled && ($slide->type ?: 'image') === 'video')) {
                     throw new \ValidationException(['type' => 'V jednom Slideru může být publikována nejvýše jedna video položka.']);
                 }

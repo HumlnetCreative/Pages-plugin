@@ -21,7 +21,7 @@
 
             <?php if (($model->type ?: 'image') === 'video'): ?>
                 <div class="hucr-slider-media__uploads">
-                    <?php foreach (['mp4' => ['MP4 video (povinné)', $mp4], 'webm' => ['WebM video (volitelné)', $webm]] as $format => [$label, $use]): ?>
+                    <?php foreach (['mp4' => ['MP4 video', $mp4], 'webm' => ['WebM video', $webm]] as $format => [$label, $use]): ?>
                         <?php $uploadField = 'slider_media_file_video_'.$context->id.'_'.$format; ?>
                         <div class="hucr-slider-media__upload" id="slider-video-<?= $context->id ?>-<?= $format ?>">
                             <label><?= e($label) ?></label><input type="file" class="form-control" name="<?= e($uploadField) ?>" accept="video/<?= $format ?>">
@@ -33,6 +33,7 @@
                 </div>
 
                 <?php $previewVideo = $webm ?: $mp4; ?>
+                <p class="help-block">Pro publikování stačí alespoň jeden z formátů MP4 nebo WebM; při nahrání obou má WebM přednost.</p>
                 <?php if ($previewVideo): ?>
                     <?php foreach (['desktop' => [$desktopWidth, $desktopHeight], 'mobile' => [$mobileWidth, $mobileHeight]] as $viewport => [$width, $height]): ?>
                         <?php $positionUse = $mp4 ?: $previewVideo; $position = data_get($positionUse->crop, $viewport, ['x' => 50, 'y' => 50]); ?>

@@ -54,7 +54,9 @@ class PresentationService
             if (!$slide) {
                 return false;
             }
-            return $slide['type'] === 'video' ? (bool) $slide['mp4'] : (bool) ($slide['desktop'] && $slide['mobile']);
+            return $slide['type'] === 'video'
+                ? (bool) ($slide['mp4'] || $slide['webm'])
+                : (bool) ($slide['desktop'] && $slide['mobile']);
         })->values()->all();
 
         return [
