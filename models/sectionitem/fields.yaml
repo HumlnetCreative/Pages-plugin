@@ -34,6 +34,18 @@ tabs:
             label: Cíl CTA
             type: pagefinder
             span: right
+        content[cta_new_window]:
+            tab: CTA
+            label: Otevřít v novém okně
+            type: switch
+            span: left
+            default: false
+        content[cta_emphasis]:
+            tab: CTA
+            label: Zvýrazněné tlačítko
+            type: switch
+            span: right
+            default: false
         style[color_scheme]:
             tab: Vzhled
             label: Barevné schéma

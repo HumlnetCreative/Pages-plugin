@@ -758,7 +758,7 @@ class BuilderPages extends Controller
             'gallery' => ['_gallery_source', 'gallery', '_gallery_actions'],
             'gallery_columns' => ['content[gallery_columns]'],
             'carousel_options' => ['_carousel_appearance', '_carousel_playback', 'content[autoplay]', 'content[playback_control]', 'content[autoplay_delay]', 'content[navigation]', 'content[pagination]', 'content[overlay]', 'content[position]'],
-            'cta' => ['content[cta_label]', 'content[cta_url]'],
+            'cta' => ['content[cta_label]', 'content[cta_url]', 'content[cta_new_window]'],
             'columns' => ['content[columns]'], 'embed' => ['content[embed]'],
             'columns_layout' => ['_columns_layout', 'content[ratio]', 'layout[columns_gap]', 'layout[tablet_behavior]', 'layout[mobile_order]', 'layout[full_padding]', '_columns_zones'],
             'media' => ['media'], 'items' => ['items'],
@@ -766,7 +766,7 @@ class BuilderPages extends Controller
         $specializedFields = [
             'content[heading]', 'content[text]', '_carousel_appearance', '_carousel_playback', '_carousel_slider', 'content[position]', 'content[image_position]',
             'layout[image_text_gap]',
-            'content[autoplay]', 'content[playback_control]', 'content[cta_label]', 'content[cta_url]', 'content[columns]',
+            'content[autoplay]', 'content[playback_control]', 'content[cta_label]', 'content[cta_url]', 'content[cta_new_window]', 'content[columns]',
             'slider', '_slider_actions', 'content[autoplay_delay]', 'content[navigation]', 'content[pagination]', 'content[overlay]',
             '_faq_group', 'faq_group', '_faq_actions',
             '_gallery_source', 'gallery', '_gallery_actions',
@@ -868,11 +868,13 @@ class BuilderPages extends Controller
     {
         $fieldMap = [
             'heading' => ['content[heading]'], 'icon' => ['content[icon]'],
-            'text' => ['content[text]'], 'cta' => ['content[cta_label]', 'content[cta_url]'],
+            'text' => ['content[text]'],
+            'cta' => ['content[cta_label]', 'content[cta_url]', 'content[cta_new_window]', 'content[cta_emphasis]'],
             'style' => ['style[color_scheme]'], 'move_card' => ['move_card'], 'media' => ['media'],
         ];
         $optionalFields = [
             'content[heading]', 'content[icon]', 'content[text]', 'content[cta_label]', 'content[cta_url]',
+            'content[cta_new_window]', 'content[cta_emphasis]',
             'style[color_scheme]', 'style[heading_color_scheme]', 'style[text_color_scheme]',
             'style[cta_color_scheme]', 'move_card', 'media',
         ];
@@ -1030,9 +1032,14 @@ class BuilderPages extends Controller
             return $this->refreshMediaEditor($owner);
         }
         $newUse = $service->createUse(
-            $source->asset, $owner::class, $owner->id, $slot, [],
-            $source->alt_text, (bool) $source->is_decorative,
-            $owner->page?->site_id ?? $owner->section?->page?->site_id
+            $source->asset,
+            $owner::class,
+            $owner->id,
+            $slot,
+            [],
+            $source->alt_text,
+            (bool) $source->is_decorative,
+            $owner->page?->site_id ?? $owner->section?->page?->site_id,
         );
         $owner->media()->where('slot', $slot)->where('id', '<>', $newUse->id)->get()->each(fn(MediaUse $use) => $use->delete());
         Flash::success('Existující master byl použit v novém slotu. Upravte jeho ořez podle potřeby.');

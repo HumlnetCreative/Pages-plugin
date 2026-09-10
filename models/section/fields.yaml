@@ -237,6 +237,11 @@ tabs:
             type: text
             span: right
             comment: 'URL, kotva, mailto:, tel: nebo interní cesta.'
+        content[cta_new_window]:
+            tab: CTA
+            label: Otevřít v novém okně
+            type: switch
+            default: false
         content[columns]:
             tab: Karty
             label: Karet na desktopu
