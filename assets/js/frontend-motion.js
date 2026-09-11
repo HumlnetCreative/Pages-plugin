@@ -25,15 +25,21 @@
 
     function parseCounter(element) {
         var finalText = element.textContent.trim();
-        var rawEnd = element.dataset.hucrCountUpEnd || finalText;
+        var hasEnd = element.dataset.hucrCountUpEnd !== undefined;
+        var hasStart = element.dataset.hucrCountUpStart !== undefined;
+        var hasDecimals = element.dataset.hucrCountUpDecimals !== undefined;
+        if ((hasEnd && element.dataset.hucrCountUpEnd.trim() === '')
+            || (hasStart && element.dataset.hucrCountUpStart.trim() === '')
+            || (hasDecimals && element.dataset.hucrCountUpDecimals.trim() === '')) return null;
+        var rawEnd = hasEnd ? element.dataset.hucrCountUpEnd : finalText;
         var normalized = rawEnd.replace(/[ \u00a0\u202f]/g, '').replace('−', '-').replace(',', '.');
         var end = Number(normalized);
-        var start = element.dataset.hucrCountUpStart === undefined ? 0 : Number(element.dataset.hucrCountUpStart);
-        var decimals = element.dataset.hucrCountUpDecimals === undefined
+        var start = hasStart ? Number(element.dataset.hucrCountUpStart) : 0;
+        var decimals = !hasDecimals
             ? ((normalized.split('.')[1] || '').length)
             : Number(element.dataset.hucrCountUpDecimals);
         if (!Number.isFinite(start) || !Number.isFinite(end) || !Number.isInteger(decimals)
-            || decimals < 0 || decimals > 3 || Math.abs(end) > 1e12) return null;
+            || decimals < 0 || decimals > 3 || Math.abs(start) > 1e12 || Math.abs(end) > 1e12) return null;
 
         var spaceMatch = finalText.match(/[ \u00a0\u202f]/);
         return {
