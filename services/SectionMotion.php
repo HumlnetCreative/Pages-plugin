@@ -7,6 +7,7 @@ final class SectionMotion
 {
     public const EFFECTS = ['none', 'fade', 'fade-up', 'fade-left', 'fade-right', 'scale-in'];
     public const DURATIONS = ['fast' => 300, 'normal' => 500, 'slow' => 700];
+    public const COUNT_UP_DURATIONS = ['fast' => 1200, 'normal' => 2000, 'slow' => 4000];
     public const DELAYS = [0, 100, 200, 300, 400];
     public const STAGGER_STEP_MS = 75;
     public const STAGGER_MAX_ITEMS = 7;
@@ -19,6 +20,14 @@ final class SectionMotion
             'duration_ms' => self::DURATIONS['normal'],
             'delay_ms' => 0,
             'stagger_items' => false,
+            'count_up' => [
+                'enabled' => false,
+                'duration' => 'normal',
+                'duration_ms' => self::COUNT_UP_DURATIONS['normal'],
+            ],
+            'has_reveal' => false,
+            'has_count_up' => false,
+            'is_active' => false,
         ];
     }
 
@@ -32,7 +41,7 @@ final class SectionMotion
             throw new \ValidationException(['style.motion' => 'Nastavení pohybu musí být mapování.']);
         }
 
-        $unknown = array_diff(array_keys($value), ['effect', 'duration', 'delay_ms', 'stagger_items']);
+        $unknown = array_diff(array_keys($value), ['effect', 'duration', 'delay_ms', 'stagger_items', 'count_up']);
         if ($unknown) {
             throw new \ValidationException(['style.motion' => 'Nastavení pohybu obsahuje neznámé volby.']);
         }
@@ -41,23 +50,19 @@ final class SectionMotion
         if (!in_array($effect, self::EFFECTS, true)) {
             throw new \ValidationException(['style.motion.effect' => 'Neplatný efekt pohybu.']);
         }
-        if ($effect === 'none') {
-            return self::defaults();
-        }
-
         $registry = SectionRegistry::instance();
-        if (!$registry->supportsMotion($type)) {
+        if ($effect !== 'none' && !$registry->supportsMotion($type)) {
             throw new \ValidationException(['style.motion.effect' => 'Tento typ sekce pohybové efekty nepodporuje.']);
         }
 
         $duration = is_string($value['duration'] ?? null) ? $value['duration'] : 'normal';
-        if (!array_key_exists($duration, self::DURATIONS)) {
+        if ($effect !== 'none' && !array_key_exists($duration, self::DURATIONS)) {
             throw new \ValidationException(['style.motion.duration' => 'Neplatná rychlost pohybu.']);
         }
 
         $rawDelay = $value['delay_ms'] ?? 0;
         $delay = is_int($rawDelay) || (is_string($rawDelay) && ctype_digit($rawDelay)) ? (int) $rawDelay : -1;
-        if (!in_array($delay, self::DELAYS, true)) {
+        if ($effect !== 'none' && !in_array($delay, self::DELAYS, true)) {
             throw new \ValidationException(['style.motion.delay_ms' => 'Neplatné zpoždění pohybu.']);
         }
 
@@ -66,9 +71,17 @@ final class SectionMotion
             throw new \ValidationException(['style.motion.stagger_items' => 'Neplatné nastavení postupného odhalení položek.']);
         }
         $stagger = in_array($rawStagger, [true, 1, '1'], true);
-        if ($stagger && !$registry->supportsMotionStagger($type)) {
+        if ($effect !== 'none' && $stagger && !$registry->supportsMotionStagger($type)) {
             throw new \ValidationException(['style.motion.stagger_items' => 'Tento typ sekce nepodporuje postupné odhalení položek.']);
         }
+
+        if ($effect === 'none') {
+            $duration = 'normal';
+            $delay = 0;
+            $stagger = false;
+        }
+
+        $countUp = self::normalizeCountUp($type, $value['count_up'] ?? [], $registry);
 
         return [
             'effect' => $effect,
@@ -76,6 +89,47 @@ final class SectionMotion
             'duration_ms' => self::DURATIONS[$duration],
             'delay_ms' => $delay,
             'stagger_items' => $stagger,
+            'count_up' => $countUp,
+            'has_reveal' => $effect !== 'none',
+            'has_count_up' => $countUp['enabled'],
+            'is_active' => $effect !== 'none' || $countUp['enabled'],
+        ];
+    }
+
+    private static function normalizeCountUp(string $type, mixed $value, SectionRegistry $registry): array
+    {
+        $defaults = self::defaults()['count_up'];
+        if ($value === null || $value === []) {
+            return $defaults;
+        }
+        if (!is_array($value)) {
+            throw new \ValidationException(['style.motion.count_up' => 'Nastavení počítadla musí být mapování.']);
+        }
+        if (array_diff(array_keys($value), ['enabled', 'duration'])) {
+            throw new \ValidationException(['style.motion.count_up' => 'Nastavení počítadla obsahuje neznámé volby.']);
+        }
+
+        $rawEnabled = $value['enabled'] ?? false;
+        if (!in_array($rawEnabled, [false, true, 0, 1, '0', '1'], true)) {
+            throw new \ValidationException(['style.motion.count_up.enabled' => 'Neplatné zapnutí počítadla.']);
+        }
+        $enabled = in_array($rawEnabled, [true, 1, '1'], true);
+        if (!$enabled) {
+            return $defaults;
+        }
+        if (!$registry->supportsMotionCountUp($type)) {
+            throw new \ValidationException(['style.motion.count_up.enabled' => 'Tento typ sekce nepodporuje počítadla.']);
+        }
+
+        $duration = is_string($value['duration'] ?? null) ? $value['duration'] : 'normal';
+        if (!array_key_exists($duration, self::COUNT_UP_DURATIONS)) {
+            throw new \ValidationException(['style.motion.count_up.duration' => 'Neplatná rychlost počítadla.']);
+        }
+
+        return [
+            'enabled' => true,
+            'duration' => $duration,
+            'duration_ms' => self::COUNT_UP_DURATIONS[$duration],
         ];
     }
 
@@ -84,16 +138,26 @@ final class SectionMotion
     {
         $style = (array) $section->style;
         $motion = self::normalize((string) $section->type, $style['motion'] ?? []);
-        if ($motion['effect'] === 'none') {
-            unset($style['motion']);
-        }
-        else {
-            $style['motion'] = [
+        $persisted = [];
+        if ($motion['has_reveal']) {
+            $persisted = [
                 'effect' => $motion['effect'],
                 'duration' => $motion['duration'],
                 'delay_ms' => $motion['delay_ms'],
                 'stagger_items' => $motion['stagger_items'],
             ];
+        }
+        if ($motion['has_count_up']) {
+            $persisted['count_up'] = [
+                'enabled' => true,
+                'duration' => $motion['count_up']['duration'],
+            ];
+        }
+        if ($persisted) {
+            $style['motion'] = $persisted;
+        }
+        else {
+            unset($style['motion']);
         }
         $section->style = $style;
     }

@@ -60,7 +60,14 @@ class SectionRegistry
             'cards' => [
                 'label' => 'Karty', 'permission' => 'humlnetcreative.pages.section.cards', 'items' => true,
                 'category' => 'basic', 'minimum_width_units' => 2,
-                'motion' => ['enabled' => true, 'stagger_items' => true],
+                'motion' => [
+                    'enabled' => true,
+                    'stagger_items' => true,
+                    'count_up' => [
+                        'section_fields' => ['content.heading', 'content.text'],
+                        'item_fields' => ['content.heading', 'content.text'],
+                    ],
+                ],
                 'wireframe' => ['heading' => 'content.heading', 'text' => 'content.text', 'item_count' => 'items'],
                 'section_fields' => ['heading', 'text', 'columns', 'items'],
                 'section_style_fields' => ['heading', 'text'],
@@ -124,7 +131,7 @@ class SectionRegistry
         $path = $theme ? $theme->getPath().'/config/page-builder.php' : null;
         if ($path && is_file($path)) {
             foreach ((require $path) as $type => $themeDefinition) {
-                $this->definitions[$type] = array_replace($this->definitions[$type] ?? [], $themeDefinition);
+                $this->definitions[$type] = $this->mergeDefinition($this->definitions[$type] ?? [], $themeDefinition);
             }
         }
 
@@ -134,7 +141,7 @@ class SectionRegistry
             }
             foreach ($extension as $type => $definition) {
                 if (is_string($type) && is_array($definition)) {
-                    $this->definitions[$type] = array_replace($this->definitions[$type] ?? [], $definition);
+                    $this->definitions[$type] = $this->mergeDefinition($this->definitions[$type] ?? [], $definition);
                 }
             }
         }
@@ -145,9 +152,14 @@ class SectionRegistry
                 'allowed_in_columns' => true,
                 'minimum_width_units' => 1,
                 'supports_fill_height' => false,
-                'motion' => ['enabled' => false, 'stagger_items' => false],
+                'motion' => ['enabled' => false, 'stagger_items' => false, 'count_up' => false],
                 'wireframe' => ['heading' => 'content.heading', 'text' => null, 'thumbnail' => null, 'item_count' => null, 'shared_source' => null],
             ], $definition, [
+                'motion' => array_replace([
+                    'enabled' => false,
+                    'stagger_items' => false,
+                    'count_up' => false,
+                ], (array) ($definition['motion'] ?? [])),
                 'wireframe' => array_replace([
                     'heading' => 'content.heading',
                     'text' => null,
@@ -159,23 +171,96 @@ class SectionRegistry
         }
     }
 
-    public function has(?string $type): bool { return isset($this->definitions[$type]) && ($this->definitions[$type]['enabled'] ?? true); }
-    public function definition(string $type): array { return $this->definitions[$type]; }
-    public function all(): array { return $this->definitions; }
-    public function itemsSupported(string $type): bool { return (bool) ($this->definitions[$type]['items'] ?? false); }
-    public function sectionFields(string $type): array { return $this->definitions[$type]['section_fields'] ?? []; }
-    public function sectionStyleFields(string $type): array { return $this->definitions[$type]['section_style_fields'] ?? []; }
-    public function itemFields(string $type): array { return $this->definitions[$type]['item_fields'] ?? []; }
-    public function itemStyleFields(string $type): array { return $this->definitions[$type]['item_style_fields'] ?? []; }
-    public function sectionMediaSlots(string $type): array { return $this->definitions[$type]['section_media_slots'] ?? []; }
-    public function itemMediaSlots(string $type): array { return $this->definitions[$type]['item_media_slots'] ?? []; }
-    public function category(string $type): string { return $this->definitions[$type]['category']; }
-    public function allowedInColumns(string $type): bool { return (bool) $this->definitions[$type]['allowed_in_columns']; }
-    public function minimumWidthUnits(string $type): int { return (int) $this->definitions[$type]['minimum_width_units']; }
-    public function supportsFillHeight(string $type): bool { return (bool) $this->definitions[$type]['supports_fill_height']; }
-    public function supportsMotion(string $type): bool { return (bool) data_get($this->definitions[$type] ?? [], 'motion.enabled', false); }
-    public function supportsMotionStagger(string $type): bool { return $this->supportsMotion($type) && (bool) data_get($this->definitions[$type] ?? [], 'motion.stagger_items', false); }
-    public function wireframe(string $type): array { return $this->definitions[$type]['wireframe']; }
+    public function has(?string $type): bool
+    {
+        return isset($this->definitions[$type]) && ($this->definitions[$type]['enabled'] ?? true);
+    }
+    public function definition(string $type): array
+    {
+        return $this->definitions[$type];
+    }
+    public function all(): array
+    {
+        return $this->definitions;
+    }
+    public function itemsSupported(string $type): bool
+    {
+        return (bool) ($this->definitions[$type]['items'] ?? false);
+    }
+    public function sectionFields(string $type): array
+    {
+        return $this->definitions[$type]['section_fields'] ?? [];
+    }
+    public function sectionStyleFields(string $type): array
+    {
+        return $this->definitions[$type]['section_style_fields'] ?? [];
+    }
+    public function itemFields(string $type): array
+    {
+        return $this->definitions[$type]['item_fields'] ?? [];
+    }
+    public function itemStyleFields(string $type): array
+    {
+        return $this->definitions[$type]['item_style_fields'] ?? [];
+    }
+    public function sectionMediaSlots(string $type): array
+    {
+        return $this->definitions[$type]['section_media_slots'] ?? [];
+    }
+    public function itemMediaSlots(string $type): array
+    {
+        return $this->definitions[$type]['item_media_slots'] ?? [];
+    }
+    public function category(string $type): string
+    {
+        return $this->definitions[$type]['category'];
+    }
+    public function allowedInColumns(string $type): bool
+    {
+        return (bool) $this->definitions[$type]['allowed_in_columns'];
+    }
+    public function minimumWidthUnits(string $type): int
+    {
+        return (int) $this->definitions[$type]['minimum_width_units'];
+    }
+    public function supportsFillHeight(string $type): bool
+    {
+        return (bool) $this->definitions[$type]['supports_fill_height'];
+    }
+    public function supportsMotion(string $type): bool
+    {
+        return (bool) data_get($this->definitions[$type] ?? [], 'motion.enabled', false);
+    }
+    public function supportsMotionStagger(string $type): bool
+    {
+        return $this->supportsMotion($type) && (bool) data_get($this->definitions[$type] ?? [], 'motion.stagger_items', false);
+    }
+    public function supportsMotionCountUp(string $type): bool
+    {
+        return (bool) data_get($this->definitions[$type] ?? [], 'motion.count_up', false);
+    }
+    public function countUpSectionFields(string $type): array
+    {
+        return array_values((array) data_get($this->definitions[$type] ?? [], 'motion.count_up.section_fields', []));
+    }
+    public function countUpItemFields(string $type): array
+    {
+        return array_values((array) data_get($this->definitions[$type] ?? [], 'motion.count_up.item_fields', []));
+    }
+    public function wireframe(string $type): array
+    {
+        return $this->definitions[$type]['wireframe'];
+    }
+
+    private function mergeDefinition(array $current, array $extension): array
+    {
+        $merged = array_replace($current, $extension);
+        if (isset($extension['motion']) && is_array($extension['motion'])) {
+            $merged['motion'] = array_replace((array) ($current['motion'] ?? []), $extension['motion']);
+        }
+
+        return $merged;
+    }
 
     public function optionsForContext(?int $widthUnits = null): array
     {

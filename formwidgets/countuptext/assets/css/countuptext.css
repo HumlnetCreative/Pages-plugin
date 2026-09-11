@@ -1,0 +1,23 @@
+.hucr-count-up-text { position: relative; }
+.hucr-count-up-text__toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.hucr-count-up-text__toolbar small { color: #6c757d; }
+.hucr-count-up-text__editor { min-height: 38px; height: auto; white-space: pre-wrap; }
+.hucr-count-up-text__editor [data-hucr-count-up],
+.fr-view [data-hucr-count-up] {
+    border-radius: 3px;
+    box-shadow: inset 0 -2px #7b61ff;
+    background: rgba(123, 97, 255, .1);
+}
+.hucr-count-up-text__popover {
+    position: absolute;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    padding: 8px;
+    border: 1px solid #d7dce2;
+    border-radius: 4px;
+    background: #fff;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .12);
+}

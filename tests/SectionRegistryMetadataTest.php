@@ -23,12 +23,16 @@ final class SectionRegistryMetadataTest extends PluginTestCase
         $this->assertTrue($registry->supportsMotion('text'));
         $this->assertTrue($registry->supportsMotion('cards'));
         $this->assertTrue($registry->supportsMotionStagger('cards'));
+        $this->assertTrue($registry->supportsMotionCountUp('cards'));
+        $this->assertSame(['content.heading', 'content.text'], $registry->countUpSectionFields('cards'));
+        $this->assertSame(['content.heading', 'content.text'], $registry->countUpItemFields('cards'));
         $this->assertTrue($registry->supportsMotionStagger('gallery'));
         $this->assertFalse($registry->supportsMotionStagger('text'));
         $this->assertFalse($registry->supportsMotion('hero'));
         $this->assertFalse($registry->supportsMotion('carousel'));
         $this->assertFalse($registry->supportsMotion('columns'));
         $this->assertFalse($registry->supportsMotion('embed'));
+        $this->assertFalse($registry->supportsMotionCountUp('text'));
     }
 
     public function testProjectPluginCanRegisterASectionDefinition(): void

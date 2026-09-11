@@ -11,6 +11,7 @@ use October\Rain\Database\Traits\SoftDelete;
 use October\Rain\Database\Traits\Sortable;
 use HumlnetCreative\Pages\Services\DraftStateService;
 use HumlnetCreative\Pages\Services\PageMutationGuard;
+use HumlnetCreative\Pages\Services\CountUpMarkup;
 
 class SectionItem extends Model
 {
@@ -39,6 +40,21 @@ class SectionItem extends Model
             if (BackendAuth::getUser() && !BackendAuth::userHasPermission($permission)) {
                 throw new \ValidationException(['section' => 'Nemáte oprávnění upravovat položky tohoto typu sekce.']);
             }
+            $content = (array) $this->content;
+            foreach (SectionRegistry::instance()->countUpItemFields($section->type) as $field) {
+                if (!str_starts_with($field, 'content.')) {
+                    continue;
+                }
+                $path = substr($field, 8);
+                $value = data_get($content, $path);
+                if ($value === null) {
+                    continue;
+                }
+                data_set($content, $path, str_ends_with($path, 'heading')
+                    ? CountUpMarkup::normalizeInline($value)
+                    : CountUpMarkup::normalizeRichText($value));
+            }
+            $this->content = $content;
             $issues = CompliancePolicy::itemIssues($section->type, $this->content ?: []);
             if ($issues && CompliancePolicy::mode() !== 'off') {
                 if (CompliancePolicy::shouldBlock()) {

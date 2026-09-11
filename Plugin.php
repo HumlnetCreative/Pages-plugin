@@ -8,6 +8,7 @@ use HumlnetCreative\Pages\FormWidgets\FaqUsage;
 use HumlnetCreative\Pages\FormWidgets\RangeSelector;
 use HumlnetCreative\Pages\FormWidgets\SliderMedia;
 use HumlnetCreative\Pages\FormWidgets\SliderUsage;
+use HumlnetCreative\Pages\FormWidgets\CountUpText;
 use HumlnetCreative\Pages\Models\Page;
 use HumlnetCreative\Pages\Models\SliderEntry;
 use Illuminate\Support\Facades\DB;
@@ -93,9 +94,11 @@ class Plugin extends PluginBase
                 $controller->addJs($assetUrl('js/backend-media-crop.js'));
                 $controller->addJs($assetUrl('js/backend-media-editor.js'));
                 $controller->addJs($assetUrl('js/backend-revision-editor.js'));
+                $controller->addJs($assetUrl('js/backend-count-up-editor.js'));
                 $controller->addCss($assetUrl('css/backend-page-builder.css'));
                 $controller->addCss($assetUrl('css/backend-media-crop.css'));
                 $controller->addCss($assetUrl('css/backend-media-editor.css'));
+                $controller->addCss($assetUrl('css/backend-count-up-editor.css'));
             }
         });
 
@@ -218,6 +221,7 @@ class Plugin extends PluginBase
             RangeSelector::class        => "rangeselector",
             SliderMedia::class          => "slidermedia",
             SliderUsage::class          => "sliderusage",
+            CountUpText::class          => 'countuptext',
         ];
     }
 

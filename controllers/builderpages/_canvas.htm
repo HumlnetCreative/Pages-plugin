@@ -211,6 +211,9 @@
                         data-section-motion-effect="<?= e($section['motion_effect']) ?>"
                         data-section-motion-duration-ms="<?= (int) $section['motion_duration_ms'] ?>"
                         data-section-motion-delay-ms="<?= (int) $section['motion_delay_ms'] ?>"
+                        data-section-motion-count-up-enabled="<?= $section['motion_count_up_enabled'] ? 'true' : 'false' ?>"
+                        data-section-motion-count-up-duration-ms="<?= (int) $section['motion_count_up_duration_ms'] ?>"
+                        data-section-motion-count-up-values="<?= e(json_encode($section['motion_count_up_values'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"
                         data-section-visible="<?= $section['visible'] ? 'true' : 'false' ?>"
                         data-section-heading-editable="<?= $section['heading_editable'] ? 'true' : 'false' ?>"
                         data-section-checks="<?= e(json_encode($section['checks'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"
@@ -236,6 +239,9 @@
                                 <strong data-hucr-card-heading><?= e($section['heading']) ?></strong>
                                 <?php if ($section['text']): ?><span><?= e($section['text']) ?></span><?php endif ?>
                                 <?php if ($section['shared_source']): ?><small><i class="icon-link" aria-hidden="true"></i> <?= e($section['shared_source']) ?></small><?php endif ?>
+                                <span class="hucr-canvas-card__count-ups" data-hucr-count-up-previews <?= $section['motion_count_up_values'] ? '' : 'hidden' ?>>
+                                    <?php foreach ($section['motion_count_up_values'] as $value): ?><span data-hucr-canvas-count-up-value><?= e($value) ?></span><?php endforeach ?>
+                                </span>
                             </span>
                         <?php endif ?>
                         <?php if ($section['type'] !== 'columns' && $section['item_previews']): ?>
@@ -358,10 +364,10 @@
                     <small class="hucr-canvas__autosave-note"><i class="icon-check" aria-hidden="true"></i> Změny se ukládají automaticky</small>
                 <?php else: ?><p>Nemáte oprávnění měnit rozvržení a barevná schémata.</p><?php endif ?>
                 <div class="form-group" data-hucr-motion-preview-row <?= empty($selectedSection['motion_supported']) ? 'hidden' : '' ?>>
-                    <label>Pohyb při odhalení</label>
+                    <label>Pohyb a počítadla</label>
                     <div><span data-hucr-selection-field="motion"><?= e($selectedSection['motion_label'] ?? 'Bez efektu') ?></span></div>
-                    <button type="button" class="btn btn-default btn-sm" data-hucr-preview-motion <?= empty($selectedSection['motion_effect']) || $selectedSection['motion_effect'] === 'none' ? 'disabled' : '' ?>><i class="icon-play" aria-hidden="true"></i> Přehrát náhled</button>
-                    <small class="form-text">Efekt se na webu přehraje pouze jednou; první sekce stránky se neanimuje.</small>
+                    <button type="button" class="btn btn-default btn-sm" data-hucr-preview-motion <?= (($selectedSection['motion_effect'] ?? 'none') === 'none' && (empty($selectedSection['motion_count_up_enabled']) || empty($selectedSection['motion_count_up_values']))) ? 'disabled' : '' ?>><i class="icon-play" aria-hidden="true"></i> Přehrát náhled</button>
+                    <small class="form-text">Náhled počítá jen označené hodnoty. Na webu se vše přehraje jednou; odhalení první sekce se vynechá.</small>
                 </div>
             </div>
         </div>

@@ -283,7 +283,13 @@
             motionPreviewRow.hidden = card.dataset.sectionMotionSupported !== 'true';
         }
         if (motionPreview) {
-            motionPreview.disabled = card.dataset.sectionMotionEffect === 'none';
+            let values = [];
+            try {
+                values = JSON.parse(card.dataset.sectionMotionCountUpValues || '[]');
+            }
+            catch (error) {}
+            motionPreview.disabled = card.dataset.sectionMotionEffect === 'none'
+                && (card.dataset.sectionMotionCountUpEnabled !== 'true' || !values.length);
         }
         renderCanvasChecks(canvas, card.dataset.sectionChecks);
         if (focusCard) {
@@ -365,7 +371,40 @@
                 fill: 'backwards',
             });
         }
+        if (card.dataset.sectionMotionCountUpEnabled === 'true') {
+            card.querySelectorAll('[data-hucr-canvas-count-up-value]').forEach(function(counter) {
+                previewCanvasCounter(counter, Number(card.dataset.sectionMotionCountUpDurationMs) || 2000);
+            });
+        }
     });
+
+    function previewCanvasCounter(element, duration) {
+        const finalText = element.dataset.hucrFinalText || element.textContent.trim();
+        element.dataset.hucrFinalText = finalText;
+        const normalized = finalText.replace(/[ \u00a0\u202f]/g, '').replace('−', '-').replace(',', '.');
+        const end = Number(normalized);
+        if (!Number.isFinite(end) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            element.textContent = finalText;
+            return;
+        }
+        const decimals = (normalized.split('.')[1] || '').length;
+        const decimalSeparator = finalText.includes(',') ? ',' : '.';
+        const groupMatch = finalText.match(/[ \u00a0\u202f]/);
+        const groupSeparator = groupMatch ? groupMatch[0] : '';
+        const started = performance.now();
+        function format(value) {
+            const fixed = Math.abs(value).toFixed(decimals).split('.');
+            if (groupSeparator) fixed[0] = fixed[0].replace(/\B(?=(\d{3})+(?!\d))/g, groupSeparator);
+            return (value < 0 ? '−' : '') + fixed[0] + (decimals ? decimalSeparator + fixed[1] : '');
+        }
+        function frame(now) {
+            const progress = Math.min(1, (now - started) / duration);
+            element.textContent = format(end * (1 - Math.pow(1 - progress, 3)));
+            if (progress < 1) requestAnimationFrame(frame);
+            else element.textContent = finalText;
+        }
+        requestAnimationFrame(frame);
+    }
 
     document.addEventListener('click', function(event) {
         const control = event.target.closest('[data-hucr-select-section]');
@@ -1108,6 +1147,9 @@
             card.dataset.sectionMotionEffect = section.motion_effect || 'none';
             card.dataset.sectionMotionDurationMs = section.motion_duration_ms || 500;
             card.dataset.sectionMotionDelayMs = section.motion_delay_ms || 0;
+            card.dataset.sectionMotionCountUpEnabled = section.motion_count_up_enabled ? 'true' : 'false';
+            card.dataset.sectionMotionCountUpDurationMs = section.motion_count_up_duration_ms || 2000;
+            card.dataset.sectionMotionCountUpValues = JSON.stringify(section.motion_count_up_values || []);
             card.dataset.sectionSource = section.shared_source || '';
             card.dataset.sectionCount = section.item_count ?? '';
             card.dataset.sectionHeadingEditable = section.heading_editable ? 'true' : 'false';
@@ -1127,6 +1169,16 @@
             );
             if (cardHeading) {
                 cardHeading.textContent = section.heading || '';
+            }
+            const countUpPreviews = card.querySelector('[data-hucr-count-up-previews]');
+            if (countUpPreviews) {
+                countUpPreviews.replaceChildren(...(section.motion_count_up_values || []).map(function(value) {
+                    const preview = document.createElement('span');
+                    preview.dataset.hucrCanvasCountUpValue = '';
+                    preview.textContent = value;
+                    return preview;
+                }));
+                countUpPreviews.hidden = !(section.motion_count_up_values || []).length;
             }
             if (cardHidden) {
                 cardHidden.hidden = Boolean(section.visible);

@@ -13,6 +13,7 @@ use HumlnetCreative\Pages\Services\DraftStateService;
 use HumlnetCreative\Pages\Services\PageMutationGuard;
 use HumlnetCreative\Pages\Services\ColumnsLayout;
 use HumlnetCreative\Pages\Services\SectionMotion;
+use HumlnetCreative\Pages\Services\CountUpMarkup;
 use October\Rain\Support\Facades\Event;
 
 class Section extends Model
@@ -60,6 +61,7 @@ class Section extends Model
         if (BackendAuth::getUser() && !BackendAuth::userHasPermission($permission)) {
             throw new \ValidationException(['type' => 'Nemáte oprávnění upravovat tento typ sekce.']);
         }
+        $this->normalizeCountUpFields(SectionRegistry::instance()->countUpSectionFields($this->type));
         SectionMotion::normalizeSection($this);
         $this->validateBuilderOptions();
         ColumnsLayout::validatePlacement($this);
@@ -114,6 +116,25 @@ class Section extends Model
     public function getMotionAttribute(): array
     {
         return SectionMotion::presentation($this);
+    }
+
+    private function normalizeCountUpFields(array $fields): void
+    {
+        $content = (array) $this->content;
+        foreach ($fields as $field) {
+            if (!str_starts_with($field, 'content.')) {
+                continue;
+            }
+            $path = substr($field, 8);
+            $value = data_get($content, $path);
+            if ($value === null) {
+                continue;
+            }
+            data_set($content, $path, str_ends_with($path, 'heading')
+                ? CountUpMarkup::normalizeInline($value)
+                : CountUpMarkup::normalizeRichText($value));
+        }
+        $this->content = $content;
     }
 
     /** Published questions from the reusable Tailor FAQ group in editorial order. */

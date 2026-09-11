@@ -33,8 +33,9 @@ final class SnapshotRoundTripTest extends PluginTestCase
                 'duration' => 'slow',
                 'delay_ms' => 200,
                 'stagger_items' => true,
+                'count_up' => ['enabled' => true, 'duration' => 'slow'],
             ]],
-            'content' => ['heading' => 'Karty', 'columns' => 2],
+            'content' => ['heading' => 'Karty <span data-hucr-count-up>12</span>', 'columns' => 2],
         ]);
         $item = SectionItem::create([
             'section_id' => $section->id,
@@ -42,7 +43,7 @@ final class SnapshotRoundTripTest extends PluginTestCase
             'is_published' => false,
             'sort_order' => 1,
             'style' => ['color_scheme' => 'tertiary'],
-            'content' => ['heading' => 'První karta', 'text' => 'Obsah'],
+            'content' => ['heading' => 'První karta', 'text' => 'Obsah <span data-hucr-count-up>1 125</span>'],
         ]);
         $asset = MediaAsset::create([
             'site_id' => 1,
@@ -74,6 +75,9 @@ final class SnapshotRoundTripTest extends PluginTestCase
         $this->assertSame('První karta', $hydrated->sections[0]['items'][0]['content']['heading']);
         $this->assertSame('fade-up', $hydrated->sections[0]['style']['motion']['effect']);
         $this->assertTrue($hydrated->sections[0]['style']['motion']['stagger_items']);
+        $this->assertSame('slow', $hydrated->sections[0]['style']['motion']['count_up']['duration']);
+        $this->assertStringContainsString('data-hucr-count-up', $hydrated->sections[0]['content']['heading']);
+        $this->assertStringContainsString('data-hucr-count-up', $hydrated->sections[0]['items'][0]['content']['text']);
         $this->assertSame($asset->uuid, $hydrated->sections[0]['items'][0]['media'][0]['asset_uuid']);
         $this->assertSame('pages/tests/master.webp', $hydrated->mediaAssets[0]['path']);
     }

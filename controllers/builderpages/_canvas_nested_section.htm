@@ -40,13 +40,16 @@
         data-section-motion-effect="<?= e($section['motion_effect']) ?>"
         data-section-motion-duration-ms="<?= (int) $section['motion_duration_ms'] ?>"
         data-section-motion-delay-ms="<?= (int) $section['motion_delay_ms'] ?>"
+        data-section-motion-count-up-enabled="<?= $section['motion_count_up_enabled'] ? 'true' : 'false' ?>"
+        data-section-motion-count-up-duration-ms="<?= (int) $section['motion_count_up_duration_ms'] ?>"
+        data-section-motion-count-up-values="<?= e(json_encode($section['motion_count_up_values'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"
         data-section-visible="<?= $section['visible'] ? 'true' : 'false' ?>"
         data-section-heading-editable="<?= $section['heading_editable'] ? 'true' : 'false' ?>"
         data-section-checks="<?= e(json_encode($section['checks'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"
         aria-pressed="<?= $section['uuid'] === $selectedUuid ? 'true' : 'false' ?>">
         <span class="hucr-canvas-card__scheme <?= $section['color_scheme_background'] ? '' : 'is-inherited' ?>" title="Barevné schéma: <?= e($section['color_scheme']) ?>" <?= $schemeStyle ? 'style="'.e($schemeStyle).'"' : '' ?>></span>
         <span class="hucr-canvas-card__meta"><span><?= e($section['type_label']) ?></span><span><?= e($section['spacing']) ?></span></span>
-        <span class="hucr-canvas-card__content"><strong data-hucr-card-heading><?= e($section['heading']) ?></strong><?php if ($section['text']): ?><span><?= e($section['text']) ?></span><?php endif ?></span>
+        <span class="hucr-canvas-card__content"><strong data-hucr-card-heading><?= e($section['heading']) ?></strong><?php if ($section['text']): ?><span><?= e($section['text']) ?></span><?php endif ?><span class="hucr-canvas-card__count-ups" data-hucr-count-up-previews <?= $section['motion_count_up_values'] ? '' : 'hidden' ?>><?php foreach ($section['motion_count_up_values'] as $value): ?><span data-hucr-canvas-count-up-value><?= e($value) ?></span><?php endforeach ?></span></span>
         <span class="hucr-canvas-card__status" data-hucr-card-hidden <?= $section['visible'] ? 'hidden' : '' ?>><i class="icon-eye-slash"></i> Skrytá</span>
     </button>
     <button type="button" class="hucr-canvas-card__warning is-<?= e($section['checks_severity']) ?>" data-hucr-card-warning data-hucr-open-checks data-severity="<?= e($section['checks_severity']) ?>" title="Otevřít kontroly bloku" aria-label="Otevřít <?= count($section['checks']) ?> nalezených problémů v kontrolách bloku" <?= $section['checks'] ? '' : 'hidden' ?>><i class="icon-warning" aria-hidden="true"></i> <span><?= count($section['checks']) ?></span></button>

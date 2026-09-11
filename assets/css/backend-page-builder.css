@@ -829,6 +829,23 @@ form.hucr-page-inspector-ready .control-tabs.primary-tabs > .tab-content > .tab-
     margin-top: 8px;
 }
 
+.hucr-canvas-card__content .hucr-canvas-card__count-ups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 7px;
+}
+
+.hucr-canvas-card__count-ups > span {
+    background: color-mix(in srgb, var(--bs-primary, #0d6efd) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--bs-primary, #0d6efd) 25%, transparent);
+    border-radius: 999px;
+    color: var(--bs-primary, #0d6efd);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    padding: 1px 7px;
+}
+
 .hucr-canvas-card__thumbnail {
     background: #e7ebf0;
     border-radius: 5px;

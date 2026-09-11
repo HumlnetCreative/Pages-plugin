@@ -9,6 +9,8 @@ use Backend\Facades\BackendAuth;
 use HumlnetCreative\Pages\Services\PagePublicationService;
 use HumlnetCreative\Pages\Services\PageStructureService;
 use HumlnetCreative\Pages\Services\SectionMotion;
+use HumlnetCreative\Pages\Services\CountUpMarkup;
+use HumlnetCreative\Pages\Services\SectionRegistry;
 
 class BuilderPage extends ComponentBase
 {
@@ -59,11 +61,33 @@ class BuilderPage extends ComponentBase
     private function hasRenderableMotion(array $sections, bool $topLevel = true): bool
     {
         foreach (array_values($sections) as $index => $section) {
-            if ((!$topLevel || $index > 0) && SectionMotion::presentation($section)['effect'] !== 'none') {
-                return true;
+            if (!$topLevel || $index > 0) {
+                $motion = SectionMotion::presentation($section);
+                if ($motion['has_reveal'] || ($motion['has_count_up'] && $this->hasCountUpMarker($section))) {
+                    return true;
+                }
             }
             foreach ($section->zones ?? [] as $zone) {
                 if ($this->hasRenderableMotion(($zone->sections ?? collect())->all(), false)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function hasCountUpMarker($section): bool
+    {
+        $registry = SectionRegistry::instance();
+        foreach ($registry->countUpSectionFields((string) $section->type) as $path) {
+            if (CountUpMarkup::count(data_get($section, $path)) > 0) {
+                return true;
+            }
+        }
+        foreach ($section->items ?? [] as $item) {
+            foreach ($registry->countUpItemFields((string) $section->type) as $path) {
+                if (CountUpMarkup::count(data_get($item, $path)) > 0) {
                     return true;
                 }
             }

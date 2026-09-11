@@ -112,6 +112,25 @@ tabs:
             type: switch
             default: false
             comment: Použije pevný rozestup 75 ms, nejvýše pro sedm položek.
+        style[motion][count_up][enabled]:
+            tab: Pohyb
+            label: Animovat označené číselné hodnoty
+            type: switch
+            default: false
+            comment: Čísla se označují přímo v podporovaných textových polích tlačítkem Počítadlo.
+        style[motion][count_up][duration]:
+            tab: Pohyb
+            label: Rychlost počítání
+            type: dropdown
+            default: normal
+            options:
+                fast: Rychlá (1,2 s)
+                normal: Normální (2 s)
+                slow: Pomalá (4 s)
+            trigger:
+                action: show
+                field: style[motion][count_up][enabled]
+                condition: checked
         content[heading]:
             tab: Obsah
             label: Nadpis

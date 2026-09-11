@@ -84,6 +84,31 @@ class CanvasSectionPresenterTest extends PluginTestCase
         }
     }
 
+    public function testItPresentsCountUpOnlyMotionAndExactAnnotatedValues(): void
+    {
+        $section = new Section([
+            'type' => 'cards',
+            'style' => ['motion' => ['count_up' => ['enabled' => true, 'duration' => 'slow']]],
+            'content' => ['heading' => 'Dojezd <span data-hucr-count-up>1 125</span> km'],
+        ]);
+        $item = new SectionItem(['content' => [
+            'heading' => '<span data-hucr-count-up>675</span> l',
+            'text' => '<p>Spotřeba <span data-hucr-count-up>15,7</span> kWh.</p>',
+        ]]);
+        $item->setRelation('media', collect());
+        $section->setRelation('items', collect([$item]));
+        $section->setRelation('media', collect());
+
+        $result = (new CanvasSectionPresenter())->present($section);
+
+        $this->assertSame('Počítadlo 4 s', $result['motion_label']);
+        $this->assertSame('none', $result['motion_effect']);
+        $this->assertTrue($result['motion_count_up_supported']);
+        $this->assertTrue($result['motion_count_up_enabled']);
+        $this->assertSame(4000, $result['motion_count_up_duration_ms']);
+        $this->assertSame(['1 125', '675', '15,7'], $result['motion_count_up_values']);
+    }
+
     public function testItPresentsEveryCoreSectionTypeForCanvas(): void
     {
         $types = [

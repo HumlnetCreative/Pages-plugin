@@ -1,0 +1,21 @@
+.fr-view [data-hucr-count-up] {
+    border-radius: 3px;
+    box-shadow: inset 0 -2px #7b61ff;
+    background: rgba(123, 97, 255, .1);
+    cursor: pointer;
+}
+
+.hucr-rich-count-up-popover {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #d7dce2;
+    border-radius: 4px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .16);
+    display: flex;
+    gap: 6px;
+    padding: 8px;
+    position: absolute;
+    z-index: 11000;
+}
+
+.hucr-rich-count-up-popover[hidden] { display: none; }

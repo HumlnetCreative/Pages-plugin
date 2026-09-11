@@ -27,6 +27,7 @@ final class CanvasSectionPresenter
         $scheme = $this->colorScheme($effectiveSchemeKey);
         $presentation = $section->type === 'carousel' ? $section->presentation : null;
         $motion = SectionMotion::presentation($section);
+        $countUpValues = $this->countUpValues($section, $registry);
 
         return [
             'id' => (int) $section->id,
@@ -56,12 +57,16 @@ final class CanvasSectionPresenter
             'color_scheme_foreground' => $scheme['foreground'],
             'fill_height' => (bool) data_get($section->layout, 'fill_height', false),
             'supports_fill_height' => $registry->supportsFillHeight($section->type),
-            'motion_supported' => $registry->supportsMotion($section->type),
+            'motion_supported' => $registry->supportsMotion($section->type) || $registry->supportsMotionCountUp($section->type),
             'motion_effect' => $motion['effect'],
-            'motion_label' => $this->motionLabel($motion['effect']),
+            'motion_label' => $this->motionLabel($motion),
             'motion_duration_ms' => $motion['duration_ms'],
             'motion_delay_ms' => $motion['delay_ms'],
             'motion_stagger_items' => $motion['stagger_items'],
+            'motion_count_up_supported' => $registry->supportsMotionCountUp($section->type),
+            'motion_count_up_enabled' => $motion['has_count_up'],
+            'motion_count_up_duration_ms' => $motion['count_up']['duration_ms'],
+            'motion_count_up_values' => $countUpValues,
             'thumbnail_url' => $this->thumbnailUrl($section, $wireframe['thumbnail']),
             'checks' => $checks,
             'checks_severity' => collect($checks)->contains(fn(array $check): bool => $check['severity'] === 'error')
@@ -199,16 +204,40 @@ final class CanvasSectionPresenter
         };
     }
 
-    private function motionLabel(string $effect): string
+    private function motionLabel(array $motion): string
     {
-        return match ($effect) {
+        $reveal = match ($motion['effect']) {
             'fade' => 'Prolnutí',
             'fade-up' => 'Prolnutí zdola',
             'fade-left' => 'Prolnutí zleva',
             'fade-right' => 'Prolnutí zprava',
             'scale-in' => 'Jemné přiblížení',
-            default => 'Bez efektu',
+            default => null,
         };
+        $countUp = $motion['has_count_up']
+            ? 'Počítadlo '.match ($motion['count_up']['duration']) {
+                'fast' => '1,2 s',
+                'slow' => '4 s',
+                default => '2 s',
+            }
+            : null;
+
+        return implode(' · ', array_filter([$reveal, $countUp])) ?: 'Bez efektu';
+    }
+
+    private function countUpValues(Section $section, SectionRegistry $registry): array
+    {
+        $values = [];
+        foreach ($registry->countUpSectionFields($section->type) as $path) {
+            array_push($values, ...CountUpMarkup::values(data_get($section, $path)));
+        }
+        foreach ($section->items as $item) {
+            foreach ($registry->countUpItemFields($section->type) as $path) {
+                array_push($values, ...CountUpMarkup::values(data_get($item, $path)));
+            }
+        }
+
+        return $values;
     }
 
     private function colorScheme(string $key): array

@@ -214,3 +214,5 @@ v4.3.3:
     - preserve_pages_redirect_query_strings.php
 v4.4.0:
     - 'Add opt-in, one-shot reveal motion for Page Builder sections'
+v4.4.1:
+    - 'Add explicit inline count-up annotations to Page Builder Motion'

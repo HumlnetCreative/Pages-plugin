@@ -715,13 +715,16 @@ class BuilderPages extends Controller
         $widget->getTab('secondary')?->linkable(false);
 
         $widget->bindEvent('form.extendFields', function($fields) use ($widget, $field) {
+            $countUpFields = [];
             if ($field === 'sections' && $widget->model instanceof Section && $widget->model->type) {
                 $this->pruneSectionForm($widget, $widget->model->type);
+                $countUpFields = SectionRegistry::instance()->countUpSectionFields($widget->model->type);
             }
             elseif ($field === 'items' && $widget->model instanceof SectionItem) {
                 $section = $this->resolveSectionForItemForm($widget->model);
                 if ($section?->type) {
                     $this->pruneSectionItemForm($widget, $section->type);
+                    $countUpFields = SectionRegistry::instance()->countUpItemFields($section->type);
                 }
             }
 
@@ -729,9 +732,17 @@ class BuilderPages extends Controller
                 ? 'undo|redo||paragraphFormat|bold|italic|underline||align|formatOL|formatUL|outdent|indent||insertPageLink|insertHR|insertTable||fullscreen|html'
                 : 'undo|redo||paragraphFormat|bold|italic|underline||align|formatOL|formatUL|outdent|indent||insertPageLink|insertHR||fullscreen';
 
-            foreach ($fields as $formField) {
+            foreach ($fields as $fieldName => $formField) {
+                $dotPath = preg_replace('/\[([^]]+)\]/', '.$1', (string) $fieldName);
+                $supportsCountUp = in_array($dotPath, $countUpFields, true);
+                if ($supportsCountUp && str_ends_with($dotPath, '.heading')) {
+                    $formField->type = 'countuptext';
+                    continue;
+                }
                 if ($formField->type === 'richeditor') {
-                    $formField->toolbarButtons = $buttons;
+                    $formField->toolbarButtons = $supportsCountUp
+                        ? $buttons.'||insertCountUp'
+                        : $buttons;
                 }
             }
         });
@@ -764,6 +775,7 @@ class BuilderPages extends Controller
             'media' => ['media'], 'items' => ['items'],
             'motion' => ['_motion', 'style[motion][effect]', 'style[motion][duration]', 'style[motion][delay_ms]'],
             'motion_stagger' => ['style[motion][stagger_items]'],
+            'motion_count_up' => ['style[motion][count_up][enabled]', 'style[motion][count_up][duration]'],
         ];
         $specializedFields = [
             'content[heading]', 'content[text]', '_carousel_appearance', '_carousel_playback', '_carousel_slider', 'content[position]', 'content[image_position]',
@@ -775,6 +787,7 @@ class BuilderPages extends Controller
             'content[gallery_columns]',
             'content[embed]', '_columns_layout', 'content[ratio]', 'layout[columns_gap]', 'layout[tablet_behavior]', 'layout[mobile_order]', 'layout[full_padding]', '_columns_zones', 'media', 'items',
             '_motion', 'style[motion][effect]', 'style[motion][duration]', 'style[motion][delay_ms]', 'style[motion][stagger_items]',
+            'style[motion][count_up][enabled]', 'style[motion][count_up][duration]',
         ];
 
         foreach ((array) \Event::fire('humlnetcreative.pages.extendSectionForm', [$widget, $type]) as $extension) {
@@ -797,6 +810,9 @@ class BuilderPages extends Controller
         }
         if (SectionRegistry::instance()->supportsMotionStagger($type)) {
             $allowedFields = array_merge($allowedFields, $fieldMap['motion_stagger']);
+        }
+        if (SectionRegistry::instance()->supportsMotionCountUp($type)) {
+            $allowedFields = array_merge($allowedFields, $fieldMap['motion_count_up']);
         }
 
         foreach (array_diff($specializedFields, $allowedFields) as $fieldName) {
