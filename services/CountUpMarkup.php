@@ -17,12 +17,17 @@ final class CountUpMarkup
 
     public static function normalizeInline(mixed $value): string
     {
+        $source = (string) ($value ?? '');
+        $prefix = '__HUCR_COUNT_UP_MARKER_';
+        while (str_contains($source, $prefix)) {
+            $prefix .= '_';
+        }
         $tokens = [];
-        $annotated = (string) preg_replace_callback(self::MARKER_PATTERN, function(array $match) use (&$tokens): string {
-            $token = '__HUCR_COUNT_UP_'.count($tokens).'__';
+        $annotated = (string) preg_replace_callback(self::MARKER_PATTERN, function(array $match) use (&$tokens, $prefix): string {
+            $token = $prefix.count($tokens).'__';
             $tokens[$token] = self::marker($match[1], $match[2]);
             return $token;
-        }, (string) ($value ?? ''));
+        }, $source);
 
         $plain = html_entity_decode(strip_tags($annotated), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $safe = htmlspecialchars($plain, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
@@ -32,8 +37,7 @@ final class CountUpMarkup
 
     public static function count(mixed $value): int
     {
-        preg_match_all(self::MARKER_PATTERN, (string) ($value ?? ''), $matches);
-        return count($matches[0] ?? []);
+        return count(self::values($value));
     }
 
     /** @return list<string> */

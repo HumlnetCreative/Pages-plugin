@@ -53,4 +53,18 @@ final class CountUpMarkupTest extends PluginTestCase
             CountUpMarkup::normalizeInline('<strong>Až</strong> <span data-hucr-count-up>1 125</span> <em>km</em>'),
         );
     }
+
+    public function testInlinePlaceholderCannotCollideWithUserText(): void
+    {
+        $input = '__HUCR_COUNT_UP_MARKER_0__ <span data-hucr-count-up>12</span>';
+
+        $this->assertSame($input, CountUpMarkup::normalizeInline($input));
+    }
+
+    public function testCountIgnoresInvalidMarkers(): void
+    {
+        $this->assertSame(1, CountUpMarkup::count(
+            '<span data-hucr-count-up>abc</span><span data-hucr-count-up>12</span>',
+        ));
+    }
 }

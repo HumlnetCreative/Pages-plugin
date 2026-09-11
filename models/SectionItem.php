@@ -118,7 +118,7 @@ class SectionItem extends Model
 
     public function getBackendLabelAttribute(): string
     {
-        $heading = trim((string) data_get($this->content, 'heading'));
+        $heading = trim((string) preg_replace('/\s+/u', ' ', strip_tags((string) data_get($this->content, 'heading'))));
         if ($heading !== '') {
             return $heading;
         }
