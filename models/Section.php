@@ -12,6 +12,7 @@ use HumlnetCreative\Pages\Services\PresentationService;
 use HumlnetCreative\Pages\Services\DraftStateService;
 use HumlnetCreative\Pages\Services\PageMutationGuard;
 use HumlnetCreative\Pages\Services\ColumnsLayout;
+use HumlnetCreative\Pages\Services\SectionMotion;
 use October\Rain\Support\Facades\Event;
 
 class Section extends Model
@@ -59,6 +60,7 @@ class Section extends Model
         if (BackendAuth::getUser() && !BackendAuth::userHasPermission($permission)) {
             throw new \ValidationException(['type' => 'Nemáte oprávnění upravovat tento typ sekce.']);
         }
+        SectionMotion::normalizeSection($this);
         $this->validateBuilderOptions();
         ColumnsLayout::validatePlacement($this);
         $this->applyComplianceIssues(CompliancePolicy::sectionIssues($this->type, $this->content ?: []));
@@ -107,6 +109,11 @@ class Section extends Model
     public function getPresentationAttribute(): array
     {
         return (new PresentationService())->build($this);
+    }
+
+    public function getMotionAttribute(): array
+    {
+        return SectionMotion::presentation($this);
     }
 
     /** Published questions from the reusable Tailor FAQ group in editorial order. */

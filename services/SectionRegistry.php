@@ -44,12 +44,14 @@ class SectionRegistry
             'text' => [
                 'label' => 'Text', 'permission' => 'humlnetcreative.pages.section.text', 'items' => false,
                 'category' => 'basic', 'minimum_width_units' => 1, 'supports_fill_height' => true,
+                'motion' => ['enabled' => true],
                 'wireframe' => ['heading' => 'content.heading', 'text' => 'content.text'],
                 'section_fields' => ['heading', 'text'], 'section_style_fields' => ['heading', 'text'],
             ],
             'image_text' => [
                 'label' => 'Text s obrázkem', 'permission' => 'humlnetcreative.pages.section.image_text', 'items' => false,
                 'category' => 'media', 'minimum_width_units' => 2, 'supports_fill_height' => true,
+                'motion' => ['enabled' => true],
                 'wireframe' => ['heading' => 'content.heading', 'text' => 'content.text', 'thumbnail' => 'image_text'],
                 'section_fields' => ['heading', 'text', 'image_position', 'image_text_gap', 'cta', 'media'],
                 'section_style_fields' => ['heading', 'text', 'cta'], 'section_media_slots' => ['image_text'],
@@ -58,6 +60,7 @@ class SectionRegistry
             'cards' => [
                 'label' => 'Karty', 'permission' => 'humlnetcreative.pages.section.cards', 'items' => true,
                 'category' => 'basic', 'minimum_width_units' => 2,
+                'motion' => ['enabled' => true, 'stagger_items' => true],
                 'wireframe' => ['heading' => 'content.heading', 'text' => 'content.text', 'item_count' => 'items'],
                 'section_fields' => ['heading', 'text', 'columns', 'items'],
                 'section_style_fields' => ['heading', 'text'],
@@ -68,6 +71,7 @@ class SectionRegistry
             'cta' => [
                 'label' => 'CTA / pruh', 'permission' => 'humlnetcreative.pages.section.cta', 'items' => false,
                 'category' => 'basic', 'minimum_width_units' => 1, 'supports_fill_height' => true,
+                'motion' => ['enabled' => true],
                 'wireframe' => ['heading' => 'content.heading', 'text' => 'content.text'],
                 'section_fields' => ['heading', 'text', 'cta'],
                 'section_style_fields' => ['container', 'heading', 'text', 'cta'],
@@ -75,12 +79,14 @@ class SectionRegistry
             'accordion' => [
                 'label' => 'FAQ', 'permission' => 'humlnetcreative.pages.section.accordion', 'items' => false,
                 'category' => 'basic', 'minimum_width_units' => 1,
+                'motion' => ['enabled' => true],
                 'wireframe' => ['heading' => 'content.heading', 'shared_source' => 'faq_group', 'item_count' => 'faq_items'],
                 'section_fields' => ['heading', 'faq_group'], 'section_style_fields' => ['heading'],
             ],
             'gallery' => [
                 'label' => 'Galerie', 'permission' => 'humlnetcreative.pages.section.gallery', 'items' => false,
                 'category' => 'media', 'minimum_width_units' => 1,
+                'motion' => ['enabled' => true, 'stagger_items' => true],
                 'wireframe' => ['heading' => 'content.heading', 'shared_source' => 'gallery', 'item_count' => 'gallery.images'],
                 'section_fields' => ['heading', 'gallery', 'gallery_columns'], 'section_style_fields' => ['heading'],
                 'defaults' => ['content' => ['gallery_columns' => 3]],
@@ -110,7 +116,7 @@ class SectionRegistry
             'opening_hours' => ['label' => 'Otevírací doba', 'permission' => 'humlnetcreative.pages.section.opening_hours', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
             'pricelist' => ['label' => 'Ceník', 'permission' => 'humlnetcreative.pages.section.pricelist', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
             'timeline' => ['label' => 'Časová osa', 'permission' => 'humlnetcreative.pages.section.timeline', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
-            'links' => ['label' => 'Odkazy', 'permission' => 'humlnetcreative.pages.section.links', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
+            'links' => ['label' => 'Odkazy', 'permission' => 'humlnetcreative.pages.section.links', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1, 'motion' => ['enabled' => true, 'stagger_items' => true]],
             'flash_messages' => ['label' => 'Flash zprávy', 'permission' => 'humlnetcreative.pages.section.flash_messages', 'items' => false, 'enabled' => false, 'category' => 'project', 'minimum_width_units' => 1],
         ];
 
@@ -139,6 +145,7 @@ class SectionRegistry
                 'allowed_in_columns' => true,
                 'minimum_width_units' => 1,
                 'supports_fill_height' => false,
+                'motion' => ['enabled' => false, 'stagger_items' => false],
                 'wireframe' => ['heading' => 'content.heading', 'text' => null, 'thumbnail' => null, 'item_count' => null, 'shared_source' => null],
             ], $definition, [
                 'wireframe' => array_replace([
@@ -166,6 +173,8 @@ class SectionRegistry
     public function allowedInColumns(string $type): bool { return (bool) $this->definitions[$type]['allowed_in_columns']; }
     public function minimumWidthUnits(string $type): int { return (int) $this->definitions[$type]['minimum_width_units']; }
     public function supportsFillHeight(string $type): bool { return (bool) $this->definitions[$type]['supports_fill_height']; }
+    public function supportsMotion(string $type): bool { return (bool) data_get($this->definitions[$type] ?? [], 'motion.enabled', false); }
+    public function supportsMotionStagger(string $type): bool { return $this->supportsMotion($type) && (bool) data_get($this->definitions[$type] ?? [], 'motion.stagger_items', false); }
     public function wireframe(string $type): array { return $this->definitions[$type]['wireframe']; }
 
     public function optionsForContext(?int $widthUnits = null): array

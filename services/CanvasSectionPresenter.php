@@ -26,6 +26,7 @@ final class CanvasSectionPresenter
             : $this->inheritedColorScheme($section);
         $scheme = $this->colorScheme($effectiveSchemeKey);
         $presentation = $section->type === 'carousel' ? $section->presentation : null;
+        $motion = SectionMotion::presentation($section);
 
         return [
             'id' => (int) $section->id,
@@ -55,6 +56,12 @@ final class CanvasSectionPresenter
             'color_scheme_foreground' => $scheme['foreground'],
             'fill_height' => (bool) data_get($section->layout, 'fill_height', false),
             'supports_fill_height' => $registry->supportsFillHeight($section->type),
+            'motion_supported' => $registry->supportsMotion($section->type),
+            'motion_effect' => $motion['effect'],
+            'motion_label' => $this->motionLabel($motion['effect']),
+            'motion_duration_ms' => $motion['duration_ms'],
+            'motion_delay_ms' => $motion['delay_ms'],
+            'motion_stagger_items' => $motion['stagger_items'],
             'thumbnail_url' => $this->thumbnailUrl($section, $wireframe['thumbnail']),
             'checks' => $checks,
             'checks_severity' => collect($checks)->contains(fn(array $check): bool => $check['severity'] === 'error')
@@ -189,6 +196,18 @@ final class CanvasSectionPresenter
             'standard' => 'Standardní mezera',
             'large' => 'Velká mezera',
             default => $value,
+        };
+    }
+
+    private function motionLabel(string $effect): string
+    {
+        return match ($effect) {
+            'fade' => 'Prolnutí',
+            'fade-up' => 'Prolnutí zdola',
+            'fade-left' => 'Prolnutí zleva',
+            'fade-right' => 'Prolnutí zprava',
+            'scale-in' => 'Jemné přiblížení',
+            default => 'Bez efektu',
         };
     }
 

@@ -28,7 +28,12 @@ final class SnapshotRoundTripTest extends PluginTestCase
             'is_published' => true,
             'sort_order' => 2,
             'layout' => ['width' => 'wide', 'spacing' => 'small'],
-            'style' => ['color_scheme' => 'secondary'],
+            'style' => ['color_scheme' => 'secondary', 'motion' => [
+                'effect' => 'fade-up',
+                'duration' => 'slow',
+                'delay_ms' => 200,
+                'stagger_items' => true,
+            ]],
             'content' => ['heading' => 'Karty', 'columns' => 2],
         ]);
         $item = SectionItem::create([
@@ -67,6 +72,8 @@ final class SnapshotRoundTripTest extends PluginTestCase
         $this->assertSame($json, $serializer->serialize($hydrated));
         $this->assertSame('test-snapshotu', $hydrated->page['fullslug']);
         $this->assertSame('První karta', $hydrated->sections[0]['items'][0]['content']['heading']);
+        $this->assertSame('fade-up', $hydrated->sections[0]['style']['motion']['effect']);
+        $this->assertTrue($hydrated->sections[0]['style']['motion']['stagger_items']);
         $this->assertSame($asset->uuid, $hydrated->sections[0]['items'][0]['media'][0]['asset_uuid']);
         $this->assertSame('pages/tests/master.webp', $hydrated->mediaAssets[0]['path']);
     }

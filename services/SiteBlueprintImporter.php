@@ -358,6 +358,12 @@ class SiteBlueprintImporter
                             throw new \ApplicationException("{$mapping} sekce {$section['type']} musí být mapování.");
                         }
                     }
+                    try {
+                        SectionMotion::normalize((string) $section['type'], data_get($section, 'style.motion', []));
+                    }
+                    catch (\ValidationException $exception) {
+                        throw new \ApplicationException($exception->getMessage());
+                    }
                     if ($section['type'] === 'columns') {
                         $ratio = (string) data_get($section, 'content.ratio', '1:1');
                         $units = ColumnsLayout::units($ratio);

@@ -5,6 +5,7 @@ use InvalidArgumentException;
 use Ramsey\Uuid\Uuid;
 use HumlnetCreative\Pages\Services\ColumnsLayout;
 use HumlnetCreative\Pages\Services\SectionRegistry;
+use HumlnetCreative\Pages\Services\SectionMotion;
 
 /** Immutable, versioned representation of one complete Builder page. */
 final class PageSnapshot
@@ -83,6 +84,15 @@ final class PageSnapshot
             $containerUuid = $section['container_uuid'] ?? null;
             if (!is_string($containerUuid) || !isset($containerUuids[$containerUuid])) {
                 throw new InvalidArgumentException("Sekce {$sectionIndex} odkazuje na neplatný kontejner.");
+            }
+            try {
+                SectionMotion::normalize((string) ($section['type'] ?? ''), data_get($section, 'style.motion', []));
+            }
+            catch (\ValidationException $exception) {
+                throw new InvalidArgumentException(
+                    "Sekce {$sectionIndex} obsahuje neplatné nastavení pohybu: ".$exception->getMessage(),
+                    previous: $exception,
+                );
             }
 
             foreach ((array) ($section['media'] ?? []) as $mediaIndex => $media) {

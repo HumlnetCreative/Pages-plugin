@@ -762,6 +762,8 @@ class BuilderPages extends Controller
             'columns' => ['content[columns]'], 'embed' => ['content[embed]'],
             'columns_layout' => ['_columns_layout', 'content[ratio]', 'layout[columns_gap]', 'layout[tablet_behavior]', 'layout[mobile_order]', 'layout[full_padding]', '_columns_zones'],
             'media' => ['media'], 'items' => ['items'],
+            'motion' => ['_motion', 'style[motion][effect]', 'style[motion][duration]', 'style[motion][delay_ms]'],
+            'motion_stagger' => ['style[motion][stagger_items]'],
         ];
         $specializedFields = [
             'content[heading]', 'content[text]', '_carousel_appearance', '_carousel_playback', '_carousel_slider', 'content[position]', 'content[image_position]',
@@ -772,6 +774,7 @@ class BuilderPages extends Controller
             '_gallery_source', 'gallery', '_gallery_actions',
             'content[gallery_columns]',
             'content[embed]', '_columns_layout', 'content[ratio]', 'layout[columns_gap]', 'layout[tablet_behavior]', 'layout[mobile_order]', 'layout[full_padding]', '_columns_zones', 'media', 'items',
+            '_motion', 'style[motion][effect]', 'style[motion][duration]', 'style[motion][delay_ms]', 'style[motion][stagger_items]',
         ];
 
         foreach ((array) \Event::fire('humlnetcreative.pages.extendSectionForm', [$widget, $type]) as $extension) {
@@ -789,6 +792,12 @@ class BuilderPages extends Controller
             )));
         }
         $allowedFields = $this->expandFieldGroups(SectionRegistry::instance()->sectionFields($type), $fieldMap);
+        if (SectionRegistry::instance()->supportsMotion($type)) {
+            $allowedFields = array_merge($allowedFields, $fieldMap['motion']);
+        }
+        if (SectionRegistry::instance()->supportsMotionStagger($type)) {
+            $allowedFields = array_merge($allowedFields, $fieldMap['motion_stagger']);
+        }
 
         foreach (array_diff($specializedFields, $allowedFields) as $fieldName) {
             $widget->removeField($fieldName);

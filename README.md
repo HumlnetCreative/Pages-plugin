@@ -1,6 +1,10 @@
 # Pages plugin
 This is plugin for creating pages and managing its content.
 
+Documentation for the current Page Builder generation:
+
+- [Section motion contract](docs/motion.md)
+
 ## Example homepage
 
 ````htm

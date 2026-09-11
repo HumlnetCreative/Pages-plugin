@@ -207,7 +207,7 @@
             }
         });
 
-        ['type', 'title', 'heading', 'text', 'count', 'source', 'status', 'width', 'spacing', 'scheme']
+        ['type', 'title', 'heading', 'text', 'count', 'source', 'status', 'width', 'spacing', 'scheme', 'motion']
             .forEach(function(field) {
                 canvas.querySelectorAll('[data-hucr-selection-field="' + field + '"]').forEach(function(target) {
                     target.textContent = card.dataset['section' + field.charAt(0).toUpperCase() + field.slice(1)] || '';
@@ -277,6 +277,14 @@
         if (quickFillHeightRow) {
             quickFillHeightRow.hidden = card.dataset.sectionFillHeightSupported !== 'true';
         }
+        const motionPreviewRow = canvas.querySelector('[data-hucr-motion-preview-row]');
+        const motionPreview = canvas.querySelector('[data-hucr-preview-motion]');
+        if (motionPreviewRow) {
+            motionPreviewRow.hidden = card.dataset.sectionMotionSupported !== 'true';
+        }
+        if (motionPreview) {
+            motionPreview.disabled = card.dataset.sectionMotionEffect === 'none';
+        }
         renderCanvasChecks(canvas, card.dataset.sectionChecks);
         if (focusCard) {
             card.focus({ preventScroll: true });
@@ -331,6 +339,33 @@
         });
         container.appendChild(list);
     }
+
+    document.addEventListener('click', function(event) {
+        const preview = event.target.closest('[data-hucr-preview-motion]');
+        const canvas = preview?.closest('[data-hucr-canvas]');
+        const card = canvas?.querySelector('[data-hucr-section-card].is-selected');
+        if (!preview || !card || preview.disabled || !card.animate
+            || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+        const keyframes = {
+            fade: [{ opacity: 0 }, { opacity: 1 }],
+            'fade-up': [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }],
+            'fade-left': [{ opacity: 0, transform: 'translateX(-12px)' }, { opacity: 1, transform: 'none' }],
+            'fade-right': [{ opacity: 0, transform: 'translateX(12px)' }, { opacity: 1, transform: 'none' }],
+            'scale-in': [{ opacity: 0, transform: 'scale(.98)' }, { opacity: 1, transform: 'none' }],
+        };
+        const frames = keyframes[card.dataset.sectionMotionEffect];
+        if (frames) {
+            card.getAnimations().forEach(function(animation) { animation.cancel(); });
+            card.animate(frames, {
+                duration: Number(card.dataset.sectionMotionDurationMs) || 500,
+                delay: Number(card.dataset.sectionMotionDelayMs) || 0,
+                easing: 'cubic-bezier(.2, .7, .2, 1)',
+                fill: 'backwards',
+            });
+        }
+    });
 
     document.addEventListener('click', function(event) {
         const control = event.target.closest('[data-hucr-select-section]');
@@ -1068,6 +1103,11 @@
             card.dataset.sectionSchemeSource = section.color_scheme_source || 'default';
             card.dataset.sectionFillHeight = section.fill_height ? 'true' : 'false';
             card.dataset.sectionFillHeightSupported = section.supports_fill_height && section.nested ? 'true' : 'false';
+            card.dataset.sectionMotion = section.motion_label || 'Bez efektu';
+            card.dataset.sectionMotionSupported = section.motion_supported ? 'true' : 'false';
+            card.dataset.sectionMotionEffect = section.motion_effect || 'none';
+            card.dataset.sectionMotionDurationMs = section.motion_duration_ms || 500;
+            card.dataset.sectionMotionDelayMs = section.motion_delay_ms || 0;
             card.dataset.sectionSource = section.shared_source || '';
             card.dataset.sectionCount = section.item_count ?? '';
             card.dataset.sectionHeadingEditable = section.heading_editable ? 'true' : 'false';

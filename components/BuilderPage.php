@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\View;
 use Backend\Facades\BackendAuth;
 use HumlnetCreative\Pages\Services\PagePublicationService;
 use HumlnetCreative\Pages\Services\PageStructureService;
+use HumlnetCreative\Pages\Services\SectionMotion;
 
 class BuilderPage extends ComponentBase
 {
@@ -47,6 +48,28 @@ class BuilderPage extends ComponentBase
         $this->page['builderRecord'] = $this->record;
         $this->page['builderSections'] = $this->sections;
         $this->page['builderFaqSchemaJson'] = $this->buildFaqSchemaJson();
+        if ($this->hasRenderableMotion($this->sections)) {
+            $css = plugins_path('humlnetcreative/pages/assets/css/frontend-motion.css');
+            $js = plugins_path('humlnetcreative/pages/assets/js/frontend-motion.js');
+            $this->addCss(URL::asset('plugins/humlnetcreative/pages/assets/css/frontend-motion.css').'?v='.(is_file($css) ? filemtime($css) : 1));
+            $this->addJs(URL::asset('plugins/humlnetcreative/pages/assets/js/frontend-motion.js').'?v='.(is_file($js) ? filemtime($js) : 1), ['defer' => true]);
+        }
+    }
+
+    private function hasRenderableMotion(array $sections, bool $topLevel = true): bool
+    {
+        foreach (array_values($sections) as $index => $section) {
+            if ((!$topLevel || $index > 0) && SectionMotion::presentation($section)['effect'] !== 'none') {
+                return true;
+            }
+            foreach ($section->zones ?? [] as $zone) {
+                if ($this->hasRenderableMotion(($zone->sections ?? collect())->all(), false)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function notFoundResponse()

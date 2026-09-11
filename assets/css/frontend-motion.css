@@ -1,0 +1,49 @@
+[data-hucr-motion-duration="fast"] { --hucr-motion-duration: 300ms; }
+[data-hucr-motion-duration="normal"] { --hucr-motion-duration: 500ms; }
+[data-hucr-motion-duration="slow"] { --hucr-motion-duration: 700ms; }
+[data-hucr-motion-delay="0"] { --hucr-motion-delay: 0ms; }
+[data-hucr-motion-delay="100"] { --hucr-motion-delay: 100ms; }
+[data-hucr-motion-delay="200"] { --hucr-motion-delay: 200ms; }
+[data-hucr-motion-delay="300"] { --hucr-motion-delay: 300ms; }
+[data-hucr-motion-delay="400"] { --hucr-motion-delay: 400ms; }
+
+[data-hucr-motion] .is-hucr-motion-pending,
+[data-hucr-motion].is-hucr-motion-pending {
+    opacity: 0;
+    transition-duration: var(--hucr-motion-duration, 500ms);
+    transition-property: opacity, transform;
+    transition-timing-function: cubic-bezier(.2, .7, .2, 1);
+    transition-delay: calc(var(--hucr-motion-delay, 0ms) + var(--hucr-motion-stagger, 0ms));
+    will-change: opacity, transform;
+}
+
+[data-hucr-motion="fade-up"] .is-hucr-motion-pending,
+[data-hucr-motion="fade-up"].is-hucr-motion-pending { transform: translateY(16px); }
+[data-hucr-motion="fade-left"] .is-hucr-motion-pending,
+[data-hucr-motion="fade-left"].is-hucr-motion-pending { transform: translateX(-12px); }
+[data-hucr-motion="fade-right"] .is-hucr-motion-pending,
+[data-hucr-motion="fade-right"].is-hucr-motion-pending { transform: translateX(12px); }
+[data-hucr-motion="scale-in"] .is-hucr-motion-pending,
+[data-hucr-motion="scale-in"].is-hucr-motion-pending { transform: scale(.98); }
+
+[data-hucr-motion] .is-hucr-motion-visible,
+[data-hucr-motion].is-hucr-motion-visible {
+    opacity: 1;
+    transform: none;
+}
+
+.hucr-motion-stagger-1 { --hucr-motion-stagger: 75ms; }
+.hucr-motion-stagger-2 { --hucr-motion-stagger: 150ms; }
+.hucr-motion-stagger-3 { --hucr-motion-stagger: 225ms; }
+.hucr-motion-stagger-4 { --hucr-motion-stagger: 300ms; }
+.hucr-motion-stagger-5 { --hucr-motion-stagger: 375ms; }
+.hucr-motion-stagger-6 { --hucr-motion-stagger: 450ms; }
+
+@media (prefers-reduced-motion: reduce), print {
+    [data-hucr-motion],
+    [data-hucr-motion] [data-hucr-motion-item] {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+    }
+}

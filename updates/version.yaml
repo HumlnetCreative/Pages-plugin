@@ -212,3 +212,5 @@ v4.3.2:
 v4.3.3:
     - 'Preserve query strings on Pages-owned permanent redirects'
     - preserve_pages_redirect_query_strings.php
+v4.4.0:
+    - 'Add opt-in, one-shot reveal motion for Page Builder sections'
