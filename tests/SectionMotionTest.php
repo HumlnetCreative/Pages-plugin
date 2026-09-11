@@ -1,6 +1,7 @@
 <?php namespace HumlnetCreative\Pages\Tests;
 
 use HumlnetCreative\Pages\Services\SectionMotion;
+use HumlnetCreative\Pages\Models\Section;
 use PluginTestCase;
 
 final class SectionMotionTest extends PluginTestCase
@@ -68,6 +69,27 @@ final class SectionMotionTest extends PluginTestCase
 
         $this->assertFalse($motion['is_active']);
         $this->assertSame(['enabled' => false, 'duration' => 'normal', 'duration_ms' => 2000], $motion['count_up']);
+    }
+
+    public function testCountUpOnlyPersistsAndLastDisabledBehaviourRemovesMotionTree(): void
+    {
+        $section = new Section([
+            'type' => 'cards',
+            'style' => ['color_scheme' => 'dark', 'motion' => [
+                'effect' => 'none',
+                'count_up' => ['enabled' => true, 'duration' => 'slow'],
+            ]],
+        ]);
+        SectionMotion::normalizeSection($section);
+        $this->assertSame([
+            'count_up' => ['enabled' => true, 'duration' => 'slow'],
+        ], $section->style['motion']);
+
+        $section->style = ['color_scheme' => 'dark', 'motion' => [
+            'count_up' => ['enabled' => false],
+        ]];
+        SectionMotion::normalizeSection($section);
+        $this->assertSame(['color_scheme' => 'dark'], $section->style);
     }
 
     /** @dataProvider invalidConfigurations */
