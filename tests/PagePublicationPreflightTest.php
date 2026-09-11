@@ -6,6 +6,7 @@ use HumlnetCreative\Pages\Services\PagePublicationPreflight;
 use HumlnetCreative\Pages\Services\PagePublicationService;
 use HumlnetCreative\Pages\Services\PageDeletionService;
 use HumlnetCreative\Pages\Services\WorkingCopyRestorer;
+use Cms\Classes\Theme;
 use Illuminate\Support\Facades\DB;
 use PluginTestCase;
 use System\Models\SiteDefinition;
@@ -334,6 +335,31 @@ final class PagePublicationPreflightTest extends PluginTestCase
         $this->assertArrayHasKey($page->uuid, $references);
         $this->assertSame('Stabilní odkaz', $references[$page->uuid]);
         $this->assertArrayNotHasKey($page->id, $references);
+    }
+
+    public function testPageFinderKeepsTheUrlProducedByTheCmsPage(): void
+    {
+        $page = $this->page('stabilni-odkaz', 'Stabilní odkaz');
+        app(PagePublicationService::class)->publish($page);
+        $item = (object) [
+            'type' => 'builder-page',
+            'reference' => $page->uuid,
+            'cmsPage' => 'page',
+        ];
+
+        $builderPageClass = get_class(new class extends BuilderPage {
+            protected static function getPageFinderUrl(string $pageCode, BuilderPage $page, Theme $theme): ?string
+            {
+                return 'https://example.test/subdirectory/stabilni-odkaz';
+            }
+        });
+        $resolved = $builderPageClass::resolveMenuItem(
+            $item,
+            '/jina-stranka',
+            Theme::load('test'),
+        );
+
+        $this->assertSame('https://example.test/subdirectory/stabilni-odkaz', $resolved['url']);
     }
 
     public function testDeletionWithPublishedChildFailsWithoutPartialWrites(): void

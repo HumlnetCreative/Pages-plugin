@@ -8,7 +8,6 @@ use October\Rain\Database\Traits\Sortable;
 use Illuminate\Support\Str;
 use Cms\Classes\Page as CmsPage;
 use Cms\Classes\Theme;
-use Url;
 use HumlnetCreative\Pages\Services\DraftStateService;
 use HumlnetCreative\Pages\Services\PageMutationGuard;
 use HumlnetCreative\Pages\Services\PageUrlPolicy;
@@ -178,8 +177,6 @@ class BuilderPage extends Model
         if (!$pageUrl) {
             return null;
         }
-
-        $pageUrl = Url::makeRelative($pageUrl);
 
         return [
             'url' => $pageUrl,
