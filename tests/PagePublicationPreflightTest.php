@@ -324,6 +324,18 @@ final class PagePublicationPreflightTest extends PluginTestCase
         $this->assertNotNull($publication->findPublishedByPath('cil'));
     }
 
+    public function testPageFinderUsesStablePageUuidAsReference(): void
+    {
+        $page = $this->page('stabilni-odkaz', 'Stabilní odkaz');
+        app(PagePublicationService::class)->publish($page);
+
+        $references = BuilderPage::getMenuTypeInfo('builder-page')['references'];
+
+        $this->assertArrayHasKey($page->uuid, $references);
+        $this->assertSame('Stabilní odkaz', $references[$page->uuid]);
+        $this->assertArrayNotHasKey($page->id, $references);
+    }
+
     public function testDeletionWithPublishedChildFailsWithoutPartialWrites(): void
     {
         $publication = app(PagePublicationService::class);

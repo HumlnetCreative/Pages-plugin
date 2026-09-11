@@ -234,9 +234,8 @@ tabs:
         content[cta_url]:
             tab: CTA
             label: Cíl CTA
-            type: text
+            type: pagefinder
             span: right
-            comment: 'URL, kotva, mailto:, tel: nebo interní cesta.'
         content[cta_new_window]:
             tab: CTA
             label: Otevřít v novém okně

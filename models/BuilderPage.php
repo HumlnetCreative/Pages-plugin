@@ -165,7 +165,11 @@ class BuilderPage extends Model
             return null;
         }
 
-        $page = static::find($item->reference);
+        $page = static::where('uuid', $item->reference)->first();
+        if (!$page && ctype_digit((string) $item->reference)) {
+            // Backwards compatibility for Page Finder values saved before UUID references.
+            $page = static::find((int) $item->reference);
+        }
         if (!$page || !$page->published_revision_id || !$page->published_is_published) {
             return null;
         }
@@ -175,7 +179,7 @@ class BuilderPage extends Model
             return null;
         }
 
-        $pageUrl = Url::to($pageUrl);
+        $pageUrl = Url::makeRelative($pageUrl);
 
         return [
             'url' => $pageUrl,
@@ -198,7 +202,7 @@ class BuilderPage extends Model
             foreach ($byParent->get($parentId, collect()) as $page) {
                 $children = $iterator((int) $page->id);
                 $publishedTitle = (string) data_get($page->published_revision?->snapshot, 'page.title', $page->title);
-                $result[$page->getKey()] = $children
+                $result[$page->uuid] = $children
                     ? ['title' => $publishedTitle, 'items' => $children]
                     : $publishedTitle;
             }
