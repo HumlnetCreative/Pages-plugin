@@ -19,3 +19,13 @@
 }
 
 .hucr-rich-count-up-popover[hidden] { display: none; }
+
+.hucr-rich-count-up-preview-clone {
+    pointer-events: none;
+    position: absolute;
+    z-index: 11001;
+}
+
+.fr-view [data-hucr-count-up][data-hucr-preview-hidden] {
+    visibility: hidden;
+}

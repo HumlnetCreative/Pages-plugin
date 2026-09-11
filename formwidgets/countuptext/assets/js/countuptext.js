@@ -1,10 +1,18 @@
 (function() {
     'use strict';
 
+    if (window.HucrCountUpText) return;
+
     var numberPattern = /^[+\-−]?(?:\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+)(?:[,.]\d{1,3})?$/;
 
     function init(root) {
-        (root || document).querySelectorAll('[data-hucr-count-up-text]:not([data-hucr-initialized])').forEach(function(widget) {
+        root = root || document;
+        var widgets = [];
+        if (root.matches && root.matches('[data-hucr-count-up-text]:not([data-hucr-initialized])')) widgets.push(root);
+        root.querySelectorAll('[data-hucr-count-up-text]:not([data-hucr-initialized])').forEach(function(widget) {
+            widgets.push(widget);
+        });
+        widgets.forEach(function(widget) {
             widget.dataset.hucrInitialized = '1';
             var editor = widget.querySelector('[data-hucr-count-up-editor]');
             var value = widget.querySelector('[data-hucr-count-up-value]');
@@ -90,6 +98,16 @@
         requestAnimationFrame(frame);
     }
 
-    document.addEventListener('DOMContentLoaded', function() { init(document); });
+    window.HucrCountUpText = { init: init };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { init(document); }, { once: true });
+    else init(document);
+    document.addEventListener('ajax:update-complete', function() { init(document); });
     document.addEventListener('ajaxUpdateComplete', function() { init(document); });
+    new MutationObserver(function(records) {
+        records.forEach(function(record) {
+            record.addedNodes.forEach(function(node) {
+                if (node.nodeType === Node.ELEMENT_NODE) init(node);
+            });
+        });
+    }).observe(document.documentElement, { childList: true, subtree: true });
 })();

@@ -1,4 +1,4 @@
-# Page Builder Motion 4.4.1
+# Page Builder Motion 4.4.2
 
 Motion provides optional one-shot reveal and count-up behaviours owned by the Pages plugin. It does not require a database migration or a snapshot schema change. Sections without an active behaviour keep their existing JSON, markup and loading behaviour.
 
@@ -52,6 +52,8 @@ Až <span data-hucr-count-up>1 125</span> km
 One marker contains exactly one localized number. Supported forms include signs, decimal comma or point, and space/NBSP/narrow-NBSP thousands grouping. Prefixes, units and a second value remain outside and receive their own marker. Optional canonical attributes `data-hucr-count-up-start`, `data-hucr-count-up-end` and `data-hucr-count-up-decimals` are accepted for importers; editors normally use the visible value and the default start `0`. Invalid or nested marker content is saved as ordinary text and never animated.
 
 Core `cards` declares Count-up support for section and item `content.heading` / `content.text`. In the backend, headings use a compact one-line annotated editor and rich text adds a `Počítadlo` toolbar action. Select the exact number, click the action, then click the highlighted marker to preview or remove it. Canvas lists the discovered values and previews Count-up even when reveal is `none`.
+
+Since 4.4.2 the rich-text action is attached through the October 4 Vue Rich Editor connector, including editors created in AJAX relation popups. It is deliberately injected only into fields declared by the registry, remains available whether or not the user has the HTML-source permission, and does not require `legacyMode`, a global jQuery/Froala instance or a theme workaround. Upgrading from 4.4.1 requires no database migration or renderer change.
 
 The `BuilderPage` component loads `assets/css/frontend-motion.css` and `assets/js/frontend-motion.js` only if the prepared page tree contains a renderable reveal or an enabled Count-up with at least one marker. The runtime uses one shared `IntersectionObserver`, runs every behaviour once, handles October AJAX content, and fails open when browser APIs are unavailable. Reduced-motion users and print output always receive final visible values without transitions.
 

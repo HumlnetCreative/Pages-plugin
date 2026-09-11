@@ -740,9 +740,12 @@ class BuilderPages extends Controller
                     continue;
                 }
                 if ($formField->type === 'richeditor') {
-                    $formField->toolbarButtons = $supportsCountUp
-                        ? $buttons.'||insertCountUp'
-                        : $buttons;
+                    $formField->toolbarButtons = $buttons;
+                    if ($supportsCountUp) {
+                        $attributes = $formField->getAttributes('container', false);
+                        $attributes['data-hucr-count-up-rich-editor'] = '1';
+                        $formField->containerAttributes($attributes);
+                    }
                 }
             }
         });
