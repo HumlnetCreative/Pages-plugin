@@ -122,3 +122,5 @@ v1.24.0:
     - 'Links slider as a new content type'
 v1.25.0:
     - 'More button definition with links block'
+v1.25.1:
+    - 'Fix escaped HTML output of bootstrap filter'
