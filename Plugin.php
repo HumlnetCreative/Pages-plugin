@@ -11,6 +11,7 @@ use System\Classes\PluginBase;
 use Lzaplata\Pages\Components\Page as PageComponent;
 use System\Classes\PluginManager;
 use Twig\Extra\String\StringExtension;
+use Twig\Markup;
 
 /**
  * Plugin class
@@ -74,12 +75,14 @@ class Plugin extends PluginBase
     {
         return [
             "filters" => [
-                "bootstrap" => function (string $text): string {
-                    return preg_replace_callback("~<table.*?</table>~is", function(array $matches): string {
+                "bootstrap" => function (string $text): Markup {
+                    $html = preg_replace_callback("~<table.*?</table>~is", function(array $matches): string {
                         $table = str_replace("<table", "<table class='table table-bordered'", $matches[0]);
 
                         return "<div class='table-responsive'>" . $table . "</div>";
                     }, $text);
+
+                    return new Markup($html, "UTF-8");
                 },
             ],
         ];

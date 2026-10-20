@@ -155,3 +155,5 @@ v2.5.2:
     - 'Content import model to log updated'
 v2.6.0:
     - 'Allow selecting partial for pricelist content type'
+v2.6.1:
+    - 'Fix escaped HTML output of bootstrap filter'
